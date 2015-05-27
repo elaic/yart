@@ -205,6 +205,7 @@ enum Bxdf : int32_t {
 	Diff,
 	Spec,
 	Trans,
+	FresSpec,
 };
 
 struct Sphere {
@@ -234,6 +235,10 @@ struct Sphere {
 //				bsdf = std::make_unique<Lambertian>(color);
 				bsdf = std::make_shared<PerfectDielectric>(color, 1.33f);
 				break;
+
+			case Bxdf::FresSpec:
+				bsdf = std::make_shared<FresnelConductor>(color,
+					Spectrum(0.16f, 0.55f, 1.75f), Spectrum(4.6f, 2.2f, 1.9f));
 		}
 	}
 
@@ -269,7 +274,7 @@ GeometryList geometry = {
 	Sphere(16.5f, Vector3f(27.0f, 16.5f, 47.0f),	
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::Spec),
 	Sphere(16.5f, Vector3f(73.0f, 16.5f, 88.0f),		
-		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::Trans),
+		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::FresSpec),
 	Sphere(8.5f, Vector3f(50.0f, 8.5f, 60.0f),			
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::Diff),
 };
@@ -339,7 +344,7 @@ void trace(const Ray& ray)
 	int id;
 
 	Spectrum finalColor = Spectrum(0.0f, 0.0f, 0.0f);
-	for (int k = 0; k < 5; ++k) {
+	for (int k = 0; k < 100; ++k) {
 		Spectrum color = Spectrum(0.0f, 0.0f, 0.0f);
 		Vector3f pathWeight = Vector3f(1.0f, 1.0f, 1.0f);
 		Ray currentRay = ray;
@@ -400,7 +405,7 @@ void trace(const Ray& ray)
 				currentRay = { intersection + dir * EPS, dir };
 			}
 		}
-		finalColor = finalColor + (color * 0.2f);
+		finalColor = finalColor + (color * 0.01f);
 	}
 
 	HitInfo hi;

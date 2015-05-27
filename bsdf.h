@@ -143,7 +143,6 @@ inline Spectrum fresnelDielectric(float cosi, float cost, const Spectrum& etai,
 inline Spectrum fresnelConductor(float cosi, const Spectrum& eta,
 	const Spectrum& k)
 {
-	/*
 	Spectrum tmp = (pointwise(eta, eta) + pointwise(k, k)) * cosi * cosi;
 	Spectrum Rparl2 = (tmp - (2.0f * eta * cosi) + 1.0f) /
 		(tmp + (2.0f * eta * cosi) + 1.0f);
@@ -151,8 +150,6 @@ inline Spectrum fresnelConductor(float cosi, const Spectrum& eta,
 	Spectrum Rperp2 = (tmp2 - (2.0f * eta * cosi) + cosi * cosi) /
 		(tmp2 + (2.0f * eta * cosi) + cosi * cosi);
 	return (Rparl2 + Rperp2) / 2.0f;
-	*/
-	return Spectrum(666.0f);
 }
 
 class Bsdf {
@@ -253,7 +250,8 @@ private:
 
 class FresnelConductor : public Bsdf {
 public:
-	FresnelConductor(const Spectrum& reflectance, float eta, float k)
+	FresnelConductor(const Spectrum& reflectance, const Spectrum& eta, 
+		const Spectrum& k)
 		: reflectance_(reflectance)
 		, eta_(eta)
 		, k_(k)
@@ -274,14 +272,14 @@ public:
 		if (absCosTheta(*wi) < COS_EPS)
 			return Spectrum(0.0f);
 		return pointwise(
-			fresnelConductor(absCosTheta(wo), Spectrum(eta_), Spectrum(k_)),
-			reflectance_) / absCosTheta(*wi);
+				fresnelConductor(absCosTheta(wo), eta_, k_), 
+				reflectance_) / absCosTheta(*wi);
 	}
 
 private:
 	Spectrum reflectance_;
-	float eta_;
-	float k_;
+	Spectrum eta_;
+	Spectrum k_;
 };
 
 #endif // BSDF_H
