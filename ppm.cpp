@@ -229,9 +229,10 @@ struct Sphere {
 //				bsdf = std::make_unique<Lambertian>(color);
 				bsdf = std::make_shared<PerfectConductor>(color);
 				break;
+
 			case Bxdf::Trans:
 //				bsdf = std::make_unique<Lambertian>(color);
-				bsdf = std::make_shared<PerfectDielectric>(color, 1.0f);
+				bsdf = std::make_shared<PerfectDielectric>(color, 1.33f);
 				break;
 		}
 	}
@@ -249,22 +250,6 @@ struct Sphere {
 
 		return (t = b - det) > 1e-4 ? t : ((t = b + det) > 1e-4 ? t : 1e20);
 	}
-};
-
-std::vector<Vector3f> colorForId = {
-	Vector3f(1.0f, 0.0f, 0.0f),
-	Vector3f(1.0f, 1.0f, 0.0f),
-	Vector3f(1.0f, 0.0f, 1.0f),
-	Vector3f(1.0f, 1.0f, 1.0f),
-	Vector3f(0.0f, 1.0f, 0.0f),
-	Vector3f(0.0f, 1.0f, 1.0f),
-	Vector3f(0.0f, 0.0f, 1.0f),
-	Vector3f(1.0f, 0.0f, 0.5f),
-	Vector3f(1.0f, 0.5f, 0.0f),
-	Vector3f(1.0f, 0.5f, 0.5f),
-	Vector3f(0.0f, 0.5f, 0.5f),
-	Vector3f(0.0f, 0.0f, 0.5f),
-	Vector3f(1.0f, 1.0f, 1.0f),
 };
 
 using GeometryList = std::vector<Sphere>;
@@ -291,7 +276,9 @@ GeometryList geometry = {
 
 int32_t toneMap(float val)
 {
-	return static_cast<int32_t>(std::pow(1.0f - std::exp(-val), 1.0f / 2.2f) * 255.0f + 0.5f);
+	return static_cast<int32_t>(
+		std::pow(1.0f - std::exp(-val), 1.0f / 2.2f) * 255.0f + 0.5f
+	);
 }
 
 inline bool intersect(const Ray& ray, float& t, int32_t& id)
@@ -342,7 +329,7 @@ static bool absEqEps(T value, T comparison, T eps)
 {
 	return std::abs(std::abs(value) - std::abs(comparison)) < eps;
 }
-bool verbose;
+
 void trace(const Ray& ray)
 {
 	using std::abs;
@@ -408,11 +395,6 @@ void trace(const Ray& ray)
 
 				Vector3f dir = hitFrame.toWorld(wi);
 
-				if (verbose) {
-					printf("dir\n");	
-					printf("\n");	
-				}
-
 				pathWeight = pointwise(pathWeight, refl) * 
 					std::abs(dot(dir, nl)) * (1.0f / pdf);
 				currentRay = { intersection + dir * EPS, dir };
@@ -439,21 +421,17 @@ int main(int /*argc*/, const char* /*argv*/[])
 		Vector3f(50.0f, 48.0f, 295.6f), 
 		Vector3f(0.0f, -0.042612f, -1.0f).normal()
 	);
-	auto cx = Vector3f(width * 0.5135f / height);
+	auto cx = Vector3f(width * 0.5135f / height, 0.0f, 0.0f);
 	auto cy = normal(cross(cx, cam.dir)) * 0.5135f;
-	Vector3f vw;
 
 	auto framebuffer = Bitmap(width, height);
 	
 	for (int32_t i = 0; i < height; ++i) {
 		for (int32_t j = 0; j < width; ++j) {
-			// x626 y531
-			if (i == 531 && j == 626)
-				verbose = true;
-			else
-				verbose = false;
 			pixelIdx = j + i * width;
-			Vector3f d = cx * ((j + 0.5f) / width - 0.5f) + cy * (-(i + 0.5f) / height + 0.5f) + cam.dir;
+			Vector3f d = 
+				cx * ((j + 0.5f) / width - 0.5f) + 
+				cy * (-(i + 0.5f) / height + 0.5f) + cam.dir;
 			Ray r = { cam.orig + d * 140.0f, normal(d) };
 			trace(r);
 		}
