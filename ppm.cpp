@@ -5,8 +5,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
-#include <vector>
+#include <thread>
+#include <mutex>
 #include <type_traits>
+#include <vector>
 
 #include "bitmap.h"
 #include "constants.h"
@@ -128,7 +130,6 @@ struct HitInfo {
 };
 
 uint32_t hashCount;
-uint32_t pixelIdx;
 uint32_t pixelCount;
 float hashS;
 
@@ -206,6 +207,7 @@ enum Bxdf : int32_t {
 	Spec,
 	Trans,
 	FresSpec,
+	FresTran,
 };
 
 struct Sphere {
@@ -239,6 +241,11 @@ struct Sphere {
 			case Bxdf::FresSpec:
 				bsdf = std::make_shared<FresnelConductor>(color,
 					Spectrum(0.16f, 0.55f, 1.75f), Spectrum(4.6f, 2.2f, 1.9f));
+				break;
+
+			case Bxdf::FresTran:
+				bsdf = std::make_shared<FresnelDielectric>(color, 1.33f);
+				break;
 		}
 	}
 
@@ -272,9 +279,9 @@ GeometryList geometry = {
 	Sphere(1e5f, Vector3f(50.0f, -1e5f + 81.6f, 81.6f),	
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
 	Sphere(16.5f, Vector3f(27.0f, 16.5f, 47.0f),	
-		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::Spec),
-	Sphere(16.5f, Vector3f(73.0f, 16.5f, 88.0f),		
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::FresSpec),
+	Sphere(16.5f, Vector3f(73.0f, 16.5f, 88.0f),		
+		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::FresTran),
 	Sphere(8.5f, Vector3f(50.0f, 8.5f, 60.0f),			
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::Diff),
 };
@@ -335,7 +342,10 @@ static bool absEqEps(T value, T comparison, T eps)
 	return std::abs(std::abs(value) - std::abs(comparison)) < eps;
 }
 
-void trace(const Ray& ray)
+std::mutex hitPointsMutex;
+using MutexLock = std::lock_guard<std::mutex>;
+
+void trace(Ray ray, int pixelIdx)
 {
 	using std::abs;
 	using std::cos;
@@ -412,9 +422,14 @@ void trace(const Ray& ray)
 
 	hi.f = finalColor;
 	hi.pix = pixelIdx;
-
+	MutexLock lock(hitPointsMutex);
 	hitPoints.push_back(hi);
 }
+
+struct RayPayload {
+	Ray ray;
+	int pixelIdx;
+};
 
 int main(int /*argc*/, const char* /*argv*/[])
 {
@@ -430,15 +445,31 @@ int main(int /*argc*/, const char* /*argv*/[])
 	auto cy = normal(cross(cx, cam.dir)) * 0.5135f;
 
 	auto framebuffer = Bitmap(width, height);
+
+	std::vector<RayPayload> rayQueue;
 	
 	for (int32_t i = 0; i < height; ++i) {
 		for (int32_t j = 0; j < width; ++j) {
-			pixelIdx = j + i * width;
+			int pixelIdx = j + i * width;
 			Vector3f d = 
 				cx * ((j + 0.5f) / width - 0.5f) + 
 				cy * (-(i + 0.5f) / height + 0.5f) + cam.dir;
-			Ray r = { cam.orig + d * 140.0f, normal(d) };
-			trace(r);
+			auto r = Ray(cam.orig + d * 140.0f, normal(d));
+			rayQueue.push_back({r, pixelIdx});
+			if (rayQueue.size() == 8) {
+				// dispatch rays
+				std::vector<std::thread> threads;
+				for (const auto& payload : rayQueue) {
+					threads.push_back(std::thread([&]{
+						trace(payload.ray, payload.pixelIdx);
+					}));
+				}
+				for (auto& thread : threads) {
+					thread.join();
+				}
+				rayQueue.clear();
+			}
+			//trace(r, pixelIdx);
 		}
 	}
 
