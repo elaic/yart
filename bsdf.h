@@ -125,16 +125,44 @@ inline bool sameHemisphere(const Vector3f& w, const Vector3f& w1)
 }
 
 /*
+ * cosi	-
+ * cost	-
+ * etai	-
+ * etat	-
+ */
 inline Spectrum fresnelDielectric(float cosi, float cost, const Spectrum& etai,
 	const Spectrum& etat)
 {
-	Spectrum Rparallel = ((etat * cosi) - (etai * cost)) / 
+	Spectrum Rparallel = 
+		((etat * cosi) - (etai * cost)) / 
 		((etat * cosi) + (etai * cost));
-	Spectrum Rperpendicular = ((etai * cosi) - (etat * cost)) /
+	Spectrum Rperpendicular = 
+		((etai * cosi) - (etat * cost)) /
 		((etai * cosi) + (etat * cost));
-	return (Rparallel * Rparallel + Rperpendicular * Rperpendicular) / 2.0f;
+	return (pointwise(Rparallel, Rparallel) + 
+		pointwise(Rperpendicular, Rperpendicular)) / 2.0f;
 }
-*/
+
+template <int n>
+float pow(float val)
+{
+	return val * pow<n - 1>(val);
+}
+
+template<>
+float pow<1>(float val)
+{
+	return val;
+}
+
+inline float fresnelDielectricSchlick(float cosi, float etai, float etat)
+{
+	float R0 = (etai - etat) / (etai + etat);
+	R0 *= R0;
+
+	float Rcos = R0 + (1 - R0) * pow<5>(1 - cosi);
+	return Rcos;
+}
 
 /*
  * eta	- wavelength dependent index od refraction
@@ -230,8 +258,10 @@ public:
 		float sini2 = sinTheta2(wo);
 		float sint2 = eta * eta * sini2;
 
+		// total internal reflection
 		if (sint2 > 1.0f)
 			return Spectrum(0.0f, 0.0f, 0.0f);
+
 		float cost = std::sqrt(std::max(0.0f, 1.0f - sint2));
 		if (entering) cost = -cost;
 
@@ -280,6 +310,78 @@ private:
 	Spectrum reflectance_;
 	Spectrum eta_;
 	Spectrum k_;
+};
+
+class FresnelDielectric : public Bsdf {
+public:
+	FresnelDielectric(const Spectrum& reflectance, float eta)
+		: reflectance_(reflectance)
+		, eta_(eta)
+	{ }
+
+	virtual Spectrum f(const Vector3f& wo, const Vector3f& wi) const override
+	{
+		return Spectrum(0.0f);
+	}
+
+	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
+		float u2, float* pdf) const override
+	{	
+		bool entering = cosTheta(wo) > 0;
+		float eta = entering ? 1.0f / eta_ : eta_;
+		float sini2 = sinTheta2(wo);
+		float sint2 = eta * eta * sini2;
+
+		// total internal reflection, reflect ray
+		if (sint2 > 1.0f) {
+			*wi = Vector3f(-wo.x, -wo.y, wo.z);
+			if (absCosTheta(*wi) < COS_EPS)
+				return Spectrum(0.0f);
+			return reflectance_ / absCosTheta(*wi);
+		}
+		
+		float etai = 1.0f;
+		float etat = eta_;
+		if (!entering)
+			std::swap(etai, etat);
+
+		float cost = std::max(0.0f, std::sqrt(1.0f - sint2));
+		Spectrum fresnel = fresnelDielectric(absCosTheta(wo), cost,
+			Spectrum(etai), Spectrum(etat));
+
+		float reflectionProbability = (fresnel.x + fresnel.y + fresnel.z) / 3.0f;
+		//printf("prob: %f/%f\n", reflectionProbability, u1);
+		float fresnelApprox = fresnelDielectricSchlick(absCosTheta(wo), etai, etat);
+
+		if (u1 < fresnelApprox) {
+			// reflection
+			*wi = Vector3f(-wo.x, -wo.y, wo.z);
+			*pdf = fresnelApprox;
+			//*pdf = 1.0f;
+			if (absCosTheta(*wi) < COS_EPS)
+				return Spectrum(0.0f);
+			return fresnelApprox * reflectance_ / absCosTheta(*wi);
+			return pointwise(fresnel, reflectance_) / absCosTheta(*wi);
+		} else {
+			return Spectrum(0.0f);
+			// refraction
+			float cost = std::sqrt(std::max(0.0f, 1.0f - sint2));
+			if (entering) cost = -cost;
+
+			float sintOverSini = eta;
+			*wi = Vector3f(sintOverSini * -wo.x, sintOverSini * -wo.y, cost);
+			*pdf = 1.0f;
+			//*pdf = 1.0f - fresnelApprox;
+			if (absCosTheta(*wi) < COS_EPS)
+				return Spectrum(0.0f);
+			//return (Spectrum(1) - fresnel) * reflectance_ / absCosTheta(*wi);
+			return pointwise(Spectrum(1.0f) - fresnel, reflectance_) / absCosTheta(*wi);
+		}
+	}
+
+private:
+	Spectrum reflectance_;
+	float eta_;
 };
 
 #endif // BSDF_H
