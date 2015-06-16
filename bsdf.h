@@ -350,31 +350,24 @@ public:
 			Spectrum(etai), Spectrum(etat));
 
 		float reflectionProbability = (fresnel.x + fresnel.y + fresnel.z) / 3.0f;
-		//printf("prob: %f/%f\n", reflectionProbability, u1);
-		float fresnelApprox = fresnelDielectricSchlick(absCosTheta(wo), etai, etat);
 
-		if (u1 < fresnelApprox) {
+		if (u1 < reflectionProbability) {
 			// reflection
 			*wi = Vector3f(-wo.x, -wo.y, wo.z);
-			*pdf = fresnelApprox;
-			//*pdf = 1.0f;
+			*pdf = reflectionProbability;
 			if (absCosTheta(*wi) < COS_EPS)
 				return Spectrum(0.0f);
-			return fresnelApprox * reflectance_ / absCosTheta(*wi);
 			return pointwise(fresnel, reflectance_) / absCosTheta(*wi);
 		} else {
-			return Spectrum(0.0f);
 			// refraction
 			float cost = std::sqrt(std::max(0.0f, 1.0f - sint2));
 			if (entering) cost = -cost;
 
 			float sintOverSini = eta;
 			*wi = Vector3f(sintOverSini * -wo.x, sintOverSini * -wo.y, cost);
-			*pdf = 1.0f;
-			//*pdf = 1.0f - fresnelApprox;
+			*pdf = 1.0f - reflectionProbability;
 			if (absCosTheta(*wi) < COS_EPS)
 				return Spectrum(0.0f);
-			//return (Spectrum(1) - fresnel) * reflectance_ / absCosTheta(*wi);
 			return pointwise(Spectrum(1.0f) - fresnel, reflectance_) / absCosTheta(*wi);
 		}
 	}
