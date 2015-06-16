@@ -324,8 +324,6 @@ void generatePhoton(Ray& pr, Vector3f& flux, int32_t i)
 	pr.orig = Vector3f(50.0f, 60.0f, 85.0f);
 }
 
-Rng rng;
-
 bool traceShadow(const Ray& ray, float maxT)
 {
 	float t = 1e20f;
@@ -353,10 +351,11 @@ void trace(Ray ray, int pixelIdx)
 	float t;
 	int id;
 
-	Spectrum finalColor = Spectrum(0.0f, 0.0f, 0.0f);
-	for (int k = 0; k < 100; ++k) {
-		Spectrum color = Spectrum(0.0f, 0.0f, 0.0f);
-		Vector3f pathWeight = Vector3f(1.0f, 1.0f, 1.0f);
+	Rng rng(pixelIdx);
+	Spectrum finalColor = Spectrum(0.0f);
+	for (int k = 0; k < 1000; ++k) {
+		Spectrum color = Spectrum(0.0f);
+		Vector3f pathWeight = Vector3f(1.0f);
 		Ray currentRay = ray;
 		id = -1;
 
@@ -384,7 +383,7 @@ void trace(Ray ray, int pixelIdx)
 				Vector3f wi;
 				float pdf;
 				Spectrum lightEmission = light.sample(intersection, &wi, &pdf);
-				Ray lightRay = { intersection + wi * EPS, wi };
+				auto lightRay = Ray(intersection + wi * EPS, wi);
 				float maxT = length(intersection - light.position());
 				if (!traceShadow(lightRay, maxT)) { 
 					if (light.isDelta()) {
@@ -394,7 +393,7 @@ void trace(Ray ray, int pixelIdx)
 							* (std::abs(dot(nl, wi)) / pdf));
 					} else {
 						assert(false);
-						color = Spectrum(0.0f, 0.0f, 0.0f);
+						color = Spectrum(0.0f);
 					}
 				}
 			}
@@ -408,6 +407,9 @@ void trace(Ray ray, int pixelIdx)
 				Spectrum refl = sphere.bsdf->sample(wo, &wi, rng.randomFloat(),
 					rng.randomFloat(), &pdf);
 
+				if ((refl.x + refl.y + refl.z) / 3.0f == 0.0f)
+					break;
+
 				Vector3f dir = hitFrame.toWorld(wi);
 
 				pathWeight = pointwise(pathWeight, refl) * 
@@ -415,7 +417,7 @@ void trace(Ray ray, int pixelIdx)
 				currentRay = { intersection + dir * EPS, dir };
 			}
 		}
-		finalColor = finalColor + (color * 0.01f);
+		finalColor = finalColor + (color * 0.001f);
 	}
 
 	HitInfo hi;
@@ -469,7 +471,18 @@ int main(int /*argc*/, const char* /*argv*/[])
 				}
 				rayQueue.clear();
 			}
-			//trace(r, pixelIdx);
+		}
+	}
+
+	if (rayQueue.size() > 0) {
+		std::vector<std::thread> threads;
+		for (const auto& payload : rayQueue) {
+			threads.push_back(std::thread([&] {
+				trace(payload.ray, payload.pixelIdx);
+			}));
+		}
+		for (auto& thread : threads) {
+			thread.join();
 		}
 	}
 
