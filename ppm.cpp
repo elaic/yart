@@ -1,16 +1,21 @@
 #include <algorithm>
 #include <cassert>
+#include <chrono>
+#include <condition_variable>
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
-#include <thread>
 #include <mutex>
+#include <thread>
 #include <type_traits>
 #include <vector>
 
+#include <semaphore.h>
+
 #include "bitmap.h"
+#include "camera.h"
 #include "constants.h"
 #include "frame.h"
 #include "rng.h"
@@ -18,41 +23,6 @@
 
 #include "bsdf.h"
 #include "light.h"
-
-namespace {
-	//static const float ALPHA = 0.7f;
-}
-
-int primes[61] = {
-	2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
-	73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151,
-	157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233,
-	239, 241, 251, 263, 269, 271, 277, 281, 283
-};
-
-inline int rev(const int i, const int p)
-{
-	if (i == 0)
-		return i;
-	else
-		return p - i;
-}
-
-float halton(const int b, int j)
-{
-	const auto prime = primes[b];
-	float h = 0.0f;
-	float f = 1.0f / static_cast<float>(prime);
-	float fct = f;
-
-	while (j > 0) {
-		h += rev(j % prime, prime) * fct;
-		j /= prime;
-		fct *= f;
-	}
-
-	return h;
-}
 
 template <typename T>
 class range {
@@ -67,10 +37,10 @@ public:
 
 		bool operator==(const iterator& rhs) { return i_ == rhs.i_; }
 		bool operator!=(const iterator& rhs) { return i_ != rhs.i_; }
-	
+
 	protected:
 		iterator(T i) : i_(i) { }
-	
+
 	private:
 		T i_;
 	};
@@ -96,110 +66,38 @@ typename range<T>::iterator end(const range<T>& range)
 	return range.end();
 }
 
-struct AABB {
-	Vector3f min;
-	Vector3f max;
+class semaphore {
+public:
+    semaphore(int32_t count) : count_(count) { }
 
-	inline void fit(const Vector3f& point)
-	{
-		min.x = std::min(min.x, point.x);
-		min.y = std::min(min.y, point.y);
-		min.z = std::min(min.z, point.z);
+    ~semaphore() = default;
 
-		max.x = std::max(max.x, point.x);
-		max.y = std::max(max.y, point.y);
-		max.z = std::max(max.z, point.z);
-	}
+    semaphore(const semaphore& copy) = delete;
+    semaphore(semaphore&& move) = default;
 
-	void reset()
-	{
-		min = Vector3f(1e20f, 1e20f, 1e20f);
-		max = Vector3f(-1e20f, -1e20f, -1e20f);
-	}
-};
+    semaphore& operator=(const semaphore& copy) = delete;
+    semaphore& operator=(semaphore&& move) = default;
 
-struct HitInfo {
-	Vector3f f;
-	Vector3f position;
-	Vector3f normal;
-	Vector3f flux;
+    inline void post()
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        ++count_;
+        condition_.notify_one();
+    }
 
-	float r2;
-	uint32_t n;
-	int32_t pix;
-};
+    inline void wait()
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        while (count_ == 0)
+            condition_.wait(lock);
+        --count_;
+    }
 
-uint32_t hashCount;
-uint32_t pixelCount;
-float hashS;
-
-using HitList = std::vector<HitInfo>;
-using HashGrid = std::vector<std::vector<HitInfo>>;
-HitList hitPoints;
-HashGrid hashGrid;
-
-inline uint32_t hash(const Vector3i& gridIdx)
-{
-	return static_cast<uint32_t>(
-		(gridIdx.x * 73856093) ^ (gridIdx.y * 19349663) ^ (gridIdx.z * 83492791)) % hashCount;
-}
-
-void buildHashGrid(const int w, const int h)
-{
-	using irange = range<int32_t>;
-	AABB hpbbox;
-	hpbbox.reset();
-
-	for (const auto& hitInfo : hitPoints) {
-		hpbbox.fit(hitInfo.position);
-	}
-
-	Vector3f ssize = hpbbox.max - hpbbox.min;
-	auto irad = ((ssize.x + ssize.y + ssize.z) / 3.0f) / ((w + h) / 2.0f) * 2.0f;
-
-	hpbbox.reset();
-	auto vphoton = 0;
-	for (auto& hitInfo : hitPoints) {
-		hitInfo.r2 = irad * irad;
-		hitInfo.n = 0;
-		hitInfo.flux = Vector3f();
-		++vphoton;
-		hpbbox.fit(hitInfo.position - irad);
-		hpbbox.fit(hitInfo.position + irad);
-	}
-	
-	hashS = 1.0f / (irad * 2.0f);
-	hashCount = vphoton;
-
-	hashGrid.resize(hashCount);
-
-	for (const auto& hitInfo : hitPoints) {
-		Vector3f min = ((hitInfo.position - irad) - hpbbox.min) * hashS;
-		Vector3f max = ((hitInfo.position + irad) - hpbbox.min) * hashS;
-
-		auto rangez = irange(std::abs(static_cast<int32_t>(min.z)), 
-			std::abs(static_cast<int32_t>(max.z)));
-		auto rangey = irange(std::abs(static_cast<int32_t>(min.y)),
-			std::abs(static_cast<int32_t>(max.y)));
-		auto rangex = irange(std::abs(static_cast<int32_t>(min.x)),
-			std::abs(static_cast<int32_t>(max.x)));
-
-		for (auto iz : rangez) {
-			for (auto iy : rangey) {
-				for (auto ix : rangex) {
-					auto hashVal = hash(Vector3i(ix, iy, iz));
-					hashGrid[hashVal].push_back(hitInfo);
-				}
-			}
-		}
-	}
-}
-
-struct Ray {
-	Vector3f orig;
-	Vector3f dir;
-
-	Ray(Vector3f o, Vector3f d) : orig(o), dir(d) { }
+private:
+    int32_t count_;
+    std::mutex mutex_;
+    std::condition_variable condition_;
+    //sem_t sem;
 };
 
 enum Bxdf : int32_t {
@@ -266,32 +164,25 @@ struct Sphere {
 
 using GeometryList = std::vector<Sphere>;
 GeometryList geometry = {
-	Sphere(1e5f, Vector3f(1e5f + 1.0f, 40.8f, 81.6f),	
+	Sphere(1e5f, Vector3f(1e5f + 1.0f, 40.8f, 81.6f),
 		Vector3f(0.75f, 0.25f, 0.25f), Bxdf::Diff),
-	Sphere(1e5f, Vector3f(-1e5f + 99.0f, 40.8f, 81.6f),	
+	Sphere(1e5f, Vector3f(-1e5f + 99.0f, 40.8f, 81.6f),
 		Vector3f(0.25f, 0.25f, 0.75f), Bxdf::Diff),
-	Sphere(1e5f, Vector3f(50.0f, 40.8f, 1e5f),		
+	Sphere(1e5f, Vector3f(50.0f, 40.8f, 1e5f),
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
-	Sphere(1e5f, Vector3f(50.0f, 40.8f, -1e5f + 170.0f), 
+	Sphere(1e5f, Vector3f(50.0f, 40.8f, -1e5f + 170.0f),
+		Vector3f(0.25f, 0.75f, 0.25f), Bxdf::Diff),
+	Sphere(1e5f, Vector3f(50.0f, 1e5f, 81.6f),
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
-	Sphere(1e5f, Vector3f(50.0f, 1e5f, 81.6f),			
+	Sphere(1e5f, Vector3f(50.0f, -1e5f + 81.6f, 81.6f),
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
-	Sphere(1e5f, Vector3f(50.0f, -1e5f + 81.6f, 81.6f),	
-		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
-	Sphere(16.5f, Vector3f(27.0f, 16.5f, 47.0f),	
+	Sphere(16.5f, Vector3f(27.0f, 16.5f, 47.0f),
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::FresSpec),
-	Sphere(16.5f, Vector3f(73.0f, 16.5f, 88.0f),		
+	Sphere(16.5f, Vector3f(73.0f, 16.5f, 88.0f),
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::FresTran),
-	Sphere(8.5f, Vector3f(50.0f, 8.5f, 60.0f),			
+	Sphere(8.5f, Vector3f(50.0f, 8.5f, 60.0f),
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::Diff),
 };
-
-int32_t toneMap(float val)
-{
-	return static_cast<int32_t>(
-		std::pow(1.0f - std::exp(-val), 1.0f / 2.2f) * 255.0f + 0.5f
-	);
-}
 
 inline bool intersect(const Ray& ray, float& t, int32_t& id)
 {
@@ -310,19 +201,9 @@ inline bool intersect(const Ray& ray, float& t, int32_t& id)
 }
 
 auto light = PointLight(
-	Vector3f(50.0f, 60.0f, 85.0f), 
+	Vector3f(50.0f, 60.0f, 85.0f),
 	Vector3f(5000.0f, 5000.0f, 5000.0f)
 );
-
-void generatePhoton(Ray& pr, Vector3f& flux, int32_t i) 
-{
-	flux = Vector3f(50000.0f, 50000.0f, 50000.0f) * (PI * 4.0f);
-	float p = 2.0f * PI * halton(0, i);
-	float t = 2.0f * std::acos(std::sqrt(1.0f - halton(1, i)));
-	float st = std::sin(t);
-	pr.dir = Vector3f(std::cos(p) * st, std::cos(t), std::sin(p) * st);
-	pr.orig = Vector3f(50.0f, 60.0f, 85.0f);
-}
 
 bool traceShadow(const Ray& ray, float maxT)
 {
@@ -330,7 +211,7 @@ bool traceShadow(const Ray& ray, float maxT)
 	int id = -1;
 	if (intersect(ray, t, id) && t < maxT)
 		return true;
-	
+
 	return false;
 }
 
@@ -340,10 +221,28 @@ static bool absEqEps(T value, T comparison, T eps)
 	return std::abs(std::abs(value) - std::abs(comparison)) < eps;
 }
 
-std::mutex hitPointsMutex;
-using MutexLock = std::lock_guard<std::mutex>;
+int32_t width = 1024;
+int32_t height = 768;
 
-void trace(Ray ray, int pixelIdx)
+auto camera = Camera(
+    Vector3f(50.0f, 48.0f, 295.6f),
+    normal(Vector3f(0.0f, -0.042612f, -1.0f)),
+    width,
+    height,
+    0.5135f
+);
+
+auto framebuffer = Bitmap(width, height);
+
+struct Tile {
+    Vector2i start;
+    Vector2i end;
+
+    Tile() { }
+    Tile(Vector2i start, Vector2i end) : start(start), end(end) { }
+};
+
+void trace(int pixelIdx, int32_t x, int32_t y)
 {
 	using std::abs;
 	using std::cos;
@@ -352,12 +251,16 @@ void trace(Ray ray, int pixelIdx)
 	int id;
 
 	Rng rng(pixelIdx);
-	Spectrum finalColor = Spectrum(0.0f);
-	for (int k = 0; k < 1000; ++k) {
+	auto finalColor = Spectrum(0.0f);
+	for (int k = 0; k < 100; ++k) {
 		Spectrum color = Spectrum(0.0f);
 		Vector3f pathWeight = Vector3f(1.0f);
-		Ray currentRay = ray;
 		id = -1;
+
+        auto currentRay = camera.sample(
+            x + rng.randomFloat() - 0.5,
+            y + rng.randomFloat() - 0.5
+        );
 
 		for (int i = 0; i < 5; ++i) {
 			if (!intersect(currentRay, t, id))
@@ -385,11 +288,11 @@ void trace(Ray ray, int pixelIdx)
 				Spectrum lightEmission = light.sample(intersection, &wi, &pdf);
 				auto lightRay = Ray(intersection + wi * EPS, wi);
 				float maxT = length(intersection - light.position());
-				if (!traceShadow(lightRay, maxT)) { 
+				if (!traceShadow(lightRay, maxT)) {
 					if (light.isDelta()) {
 						Spectrum f = sphere.bsdf->f(wo, wi);
-						color = color + (pointwise(pathWeight, 
-							pointwise(f, lightEmission)) 
+						color = color + (pointwise(pathWeight,
+							pointwise(f, lightEmission))
 							* (std::abs(dot(nl, wi)) / pdf));
 					} else {
 						assert(false);
@@ -412,85 +315,151 @@ void trace(Ray ray, int pixelIdx)
 
 				Vector3f dir = hitFrame.toWorld(wi);
 
-				pathWeight = pointwise(pathWeight, refl) * 
+				pathWeight = pointwise(pathWeight, refl) *
 					std::abs(dot(dir, nl)) * (1.0f / pdf);
 				currentRay = { intersection + dir * EPS, dir };
 			}
 		}
-		finalColor = finalColor + (color * 0.001f);
+		finalColor = finalColor + (color * 0.01f);
 	}
 
-	HitInfo hi;
-
-	hi.f = finalColor;
-	hi.pix = pixelIdx;
-	MutexLock lock(hitPointsMutex);
-	hitPoints.push_back(hi);
+    framebuffer.set(x, y, finalColor);
 }
 
-struct RayPayload {
-	Ray ray;
-	int pixelIdx;
-};
+void processTile(Tile tile)
+{
+    for (int32_t y = tile.start.y; y < tile.end.y; ++y) {
+        for (int32_t x = tile.start.x; x < tile.end.x; ++x) {
+            trace(x + y * width, x, y);
+        }
+    }
+}
+
+std::vector<std::thread> workers;
+
+using WorkQueue = std::vector<Tile>;
+WorkQueue workQueue;
+
+using LockGuard = std::unique_lock<std::mutex>;
+std::mutex queueMutex;
+std::mutex runMutex;
+std::condition_variable runCondition;
+semaphore taskSemahore(0);
+
+int32_t numUnfinished = 0;
+
+static const int32_t numWorkers = 8;
+
+void enqueuTiles(const WorkQueue& tasks)
+{
+    {
+        LockGuard lock(queueMutex);
+        workQueue.insert(end(workQueue), begin(tasks), end(tasks));
+        printf("Done enqueueing tasks\n");
+    }
+    {
+        LockGuard lock(runMutex);
+        numUnfinished = workQueue.size();
+    }
+}
+
+void runTiles()
+{
+    printf("Running tasks\n");
+    auto size = workQueue.size();
+    while (size-- > 0) {
+        taskSemahore.post();
+    }
+}
+
+void tileTask()
+{
+    while (true) {
+        taskSemahore.wait();
+
+        Tile currentTile;
+        {
+            LockGuard lock(queueMutex);
+            if (workQueue.size() == 0)
+                break;
+            currentTile = workQueue.back();
+            workQueue.pop_back();
+        }
+
+        processTile(currentTile);
+
+        {
+            LockGuard lock(runMutex);
+            int unfinished = --numUnfinished;
+            //printf("%i\n", unfinished);
+            if (unfinished <= 0)
+            {
+                runCondition.notify_one();
+                printf("tasks finished\n");
+                break;
+            }
+        }
+    }
+}
+
+void waitForCompletion()
+{
+    printf("Wait for task completion\n");
+    LockGuard lock(runMutex);
+    while (numUnfinished > 0)
+        runCondition.wait(lock);
+}
+
+void workQueueInit()
+{
+    printf("Init work queue\n");
+    workers.reserve(numWorkers);
+    for (int32_t i = 0; i < numWorkers; ++i) {
+        workers.push_back(std::thread(tileTask));
+    }
+}
+
+void workQueueShutdown()
+{
+    printf("Shutdown work queue\n");
+    waitForCompletion();
+    for (int32_t i = 0; i < numWorkers; ++i) {
+        taskSemahore.post();
+    }
+    std::for_each(begin(workers), end(workers), [&](auto& t){ t.join(); });
+}
 
 int main(int /*argc*/, const char* /*argv*/[])
 {
 	using std::abs;
-	int32_t width = 1024;
-	int32_t height = 768;
+    static const int32_t tileSize = 32;
 
-	auto cam = Ray(
-		Vector3f(50.0f, 48.0f, 295.6f), 
-		Vector3f(0.0f, -0.042612f, -1.0f).normal()
-	);
-	auto cx = Vector3f(width * 0.5135f / height, 0.0f, 0.0f);
-	auto cy = normal(cross(cx, cam.dir)) * 0.5135f;
+    Rng jitter(0);
 
-	auto framebuffer = Bitmap(width, height);
+    Vector2i numFullTiles;
+    numFullTiles.x = width / tileSize;
+    numFullTiles.y = height / tileSize;
 
-	std::vector<RayPayload> rayQueue;
-	
-	for (int32_t i = 0; i < height; ++i) {
-		for (int32_t j = 0; j < width; ++j) {
-			int pixelIdx = j + i * width;
-			Vector3f d = 
-				cx * ((j + 0.5f) / width - 0.5f) + 
-				cy * (-(i + 0.5f) / height + 0.5f) + cam.dir;
-			auto r = Ray(cam.orig + d * 140.0f, normal(d));
-			rayQueue.push_back({r, pixelIdx});
-			if (rayQueue.size() == 8) {
-				// dispatch rays
-				std::vector<std::thread> threads;
-				for (const auto& payload : rayQueue) {
-					threads.push_back(std::thread([&]{
-						trace(payload.ray, payload.pixelIdx);
-					}));
-				}
-				for (auto& thread : threads) {
-					thread.join();
-				}
-				rayQueue.clear();
-			}
-		}
-	}
+    workQueueInit();
 
-	if (rayQueue.size() > 0) {
-		std::vector<std::thread> threads;
-		for (const auto& payload : rayQueue) {
-			threads.push_back(std::thread([&] {
-				trace(payload.ray, payload.pixelIdx);
-			}));
-		}
-		for (auto& thread : threads) {
-			thread.join();
-		}
-	}
+    std::vector<Tile> tiles;
+    tiles.reserve(8);
+    Vector2i start;
+    Vector2i end;
+    for (auto i = 0; i < numFullTiles.x; ++i) {
+        for (auto j = 0; j < numFullTiles.y; ++j) {
+            start.x = i * tileSize;
+            start.y = j * tileSize;
+            end.x = (i + 1) * tileSize;
+            end.y = (j + 1) * tileSize;
+            tiles.push_back(Tile(start, end));
+        }
+    }
 
-	for (const auto& hp : hitPoints) {
-		int y = hp.pix / width;
-		int x = hp.pix - y * width;
-		framebuffer.set(x, y, hp.f);
-	}
+    enqueuTiles(tiles);
+    runTiles();
+    waitForCompletion();
+    workQueueShutdown();
 
 	framebuffer.write("image.bmp");
 

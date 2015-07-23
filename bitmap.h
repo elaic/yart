@@ -51,7 +51,7 @@ public:
 private:
 	int32_t width_;
 	int32_t height_;
-	
+
 	std::vector<Vector3f> buffer_;
 };
 

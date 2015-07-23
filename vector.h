@@ -6,6 +6,31 @@
 #include <type_traits>
 
 template <typename T>
+struct TVector2 {
+    static_assert(std::is_arithmetic<T>::value, "Only numbers allowed");
+    T x;
+    T y;
+
+    explicit TVector2() = default;
+
+    explicit TVector2(T val) : x(val), y(val) { }
+
+    explicit TVector2(T x, T y) : x(x), y(y) { }
+
+    TVector2(const TVector2& copy) = default;
+
+    TVector2& operator=(const TVector2& copy) = default;
+
+    TVector2(TVector2&& move) = default;
+
+    TVector2& operator=(TVector2&& move) = default;
+};
+
+using Vector2f = TVector2<float>;
+using Vector2d = TVector2<double>;
+using Vector2i = TVector2<int32_t>;
+
+template <typename T>
 struct TVector3 {
 	static_assert(std::is_arithmetic<T>::value, "Only numbers allowed");
 	T x;
@@ -35,7 +60,7 @@ struct TVector3 {
 	{
 		return TVector3(x - rhs.x, y - rhs.y, z - rhs.z);
 	}
-	
+
 	/*
 	 * THIS IS TEMPORARY!!!
 	 * When spectrum class is implemented, delete this
@@ -154,4 +179,13 @@ using Vector3i = TVector3<int32_t>;
 
 using Spectrum = TVector3<float>;
 
+// Temporarily add Ray
+struct Ray {
+    Vector3f orig;
+    Vector3f dir;
+
+    Ray(Vector3f o, Vector3f d) : orig(o), dir(d) { }
+};
+
 #endif // VECTOR_H
+

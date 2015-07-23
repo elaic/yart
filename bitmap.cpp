@@ -27,7 +27,7 @@ bool Bitmap::write(const std::string& name)
 	fileHeader.reserved2 = 0;
 	fileHeader.offset = sizeof(BitmapMagic) + sizeof(BitmapFileHeader)
 		+ sizeof(BitmapInfoHeader);
-	
+
 	BitmapInfoHeader infoHeader;
 	infoHeader.size = sizeof(BitmapInfoHeader);
 	infoHeader.width = width_;
@@ -61,6 +61,6 @@ bool Bitmap::write(const std::string& name)
 	}
 
 	success = true;
-	
+
 	return success;
 }

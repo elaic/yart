@@ -75,13 +75,13 @@ inline Vector3f uniformHemisphereSample(float u1, float u2)
 {
 	using std::sqrt;
 	using std::max;
-	
+
 	float z = u1;
 	float r = sqrt(max(0.0f, 1.0f - z * z));
 	float phi = 2.0f * PI * u2;
 	float x = r * std::cos(phi);
 	float y = r * std::sin(phi);
-	
+
 	return Vector3f(x, y, z);
 }
 
@@ -134,12 +134,12 @@ inline Spectrum fresnelDielectric(float cosi, float cost, const Spectrum& etai,
 	const Spectrum& etat)
 {
 	Spectrum Rparallel = 
-		((etat * cosi) - (etai * cost)) / 
+		((etat * cosi) - (etai * cost)) /
 		((etat * cosi) + (etai * cost));
-	Spectrum Rperpendicular = 
+	Spectrum Rperpendicular =
 		((etai * cosi) - (etat * cost)) /
 		((etai * cosi) + (etat * cost));
-	return (pointwise(Rparallel, Rparallel) + 
+	return (pointwise(Rparallel, Rparallel) +
 		pointwise(Rperpendicular, Rperpendicular)) / 2.0f;
 }
 
@@ -200,7 +200,7 @@ public:
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override
 	{
-		*wi = cosHemisphereSample(u1, u2);		
+		*wi = cosHemisphereSample(u1, u2);
 		if (wo.z < 0.0f) wi->z *= -1.0f;
 		*pdf = sameHemisphere(wo, *wi) ? absCosTheta(*wi) * INV_PI : 0.0f;
 		if (absCosTheta(*wi) < COS_EPS)
@@ -280,7 +280,7 @@ private:
 
 class FresnelConductor : public Bsdf {
 public:
-	FresnelConductor(const Spectrum& reflectance, const Spectrum& eta, 
+	FresnelConductor(const Spectrum& reflectance, const Spectrum& eta,
 		const Spectrum& k)
 		: reflectance_(reflectance)
 		, eta_(eta)
@@ -302,7 +302,7 @@ public:
 		if (absCosTheta(*wi) < COS_EPS)
 			return Spectrum(0.0f);
 		return pointwise(
-				fresnelConductor(absCosTheta(wo), eta_, k_), 
+				fresnelConductor(absCosTheta(wo), eta_, k_),
 				reflectance_) / absCosTheta(*wi);
 	}
 
@@ -326,7 +326,7 @@ public:
 
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override
-	{	
+	{
 		bool entering = cosTheta(wo) > 0;
 		float eta = entering ? 1.0f / eta_ : eta_;
 		float sini2 = sinTheta2(wo);
@@ -339,7 +339,7 @@ public:
 				return Spectrum(0.0f);
 			return reflectance_ / absCosTheta(*wi);
 		}
-		
+
 		float etai = 1.0f;
 		float etat = eta_;
 		if (!entering)
