@@ -12,8 +12,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <semaphore.h>
-
 #include "bitmap.h"
 #include "camera.h"
 #include "constants.h"
@@ -23,6 +21,7 @@
 
 #include "bsdf.h"
 #include "light.h"
+#include "triangle.h"
 
 template <typename T>
 class range {
@@ -97,7 +96,6 @@ private:
     int32_t count_;
     std::mutex mutex_;
     std::condition_variable condition_;
-    //sem_t sem;
 };
 
 enum Bxdf : int32_t {
@@ -184,6 +182,16 @@ GeometryList geometry = {
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::Diff),
 };
 
+auto triangle = TriangleMesh(
+    {
+        Vector3f(20.0f, 20.0f, 60.0f),
+        Vector3f(20.0f, 40.0f, 60.0f),
+        Vector3f(40.0f, 20.0f, 60.0f)
+    },
+    { Triangle(0, 1, 2) },
+    std::make_shared<Lambertian>(Spectrum(0.6f, 0.6f, 0.6f))
+);
+
 inline bool intersect(const Ray& ray, float& t, int32_t& id)
 {
 	float d;
@@ -196,6 +204,10 @@ inline bool intersect(const Ray& ray, float& t, int32_t& id)
 			id = i;
 		}
 	}
+
+    RayHitInfo hitInfo;
+    if (triangle.intersect(ray, &hitInfo))
+        t = inf;
 
 	return t < inf;
 }
