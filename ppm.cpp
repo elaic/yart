@@ -165,7 +165,7 @@ GeometryList geometry = {
 	Sphere(1e5f, Vector3f(1e5f + 1.0f, 40.8f, 81.6f),
 		Vector3f(0.75f, 0.25f, 0.25f), Bxdf::Diff),
 	Sphere(1e5f, Vector3f(-1e5f + 99.0f, 40.8f, 81.6f),
-		Vector3f(0.25f, 0.25f, 0.75f), Bxdf::Diff),
+		Vector3f(0.99f, 0.99f, 0.99f), Bxdf::FresSpec),
 	Sphere(1e5f, Vector3f(50.0f, 40.8f, 1e5f),
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
 	Sphere(1e5f, Vector3f(50.0f, 40.8f, -1e5f + 170.0f),
@@ -182,34 +182,70 @@ GeometryList geometry = {
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::Diff),
 };
 
-auto triangle = TriangleMesh(
+auto cube = TriangleMesh(
     {
-        Vector3f(20.0f, 20.0f, 60.0f),
-        Vector3f(20.0f, 40.0f, 60.0f),
-        Vector3f(40.0f, 20.0f, 60.0f)
+        Vector3f(10.0f, 20.0f, 80.0f), // 0
+        Vector3f(10.0f, 40.0f, 80.0f), // 1
+        Vector3f(30.0f, 20.0f, 80.0f), // 2
+        Vector3f(30.0f, 40.0f, 80.0f), // 3
+        Vector3f(10.0f, 20.0f, 100.0f), // 4
+        Vector3f(10.0f, 40.0f, 100.0f), // 5
+        Vector3f(30.0f, 20.0f, 100.0f), // 6
+        Vector3f(30.0f, 40.0f, 100.0f), // 7
     },
-    { Triangle(0, 1, 2) },
-    std::make_shared<Lambertian>(Spectrum(0.6f, 0.6f, 0.6f))
+    {
+        Triangle(0, 1, 2), // rear
+        Triangle(1, 3, 2),
+        Triangle(0, 4, 1), // left
+        Triangle(4, 5, 1),
+        Triangle(4, 7, 5), // front
+        Triangle(7, 4, 6),
+        Triangle(7, 6, 3), // right
+        Triangle(6, 2, 3),
+        Triangle(1, 5, 7), // top
+        Triangle(5, 7, 3),
+        Triangle(0, 6, 4), // bottom
+        Triangle(0, 2, 6),
+    },
+    std::make_shared<Lambertian>(Spectrum(0.1f, 0.3f, 0.7f))
+    //std::make_shared<FresnelDielectric>(Spectrum(0.8f, 0.8f, 0.8f), 1.33f)
 );
 
-inline bool intersect(const Ray& ray, float& t, int32_t& id)
+/*
+struct IntersectionResult {
+    Vector3f normal;
+    float t;
+    // Intersection stores a pointer because it doesn't own the bsdf, it just
+    // uses it.
+    Bsdf* bsdf;
+};
+*/
+
+inline bool intersect(const Ray& ray, RayHitInfo* const isect)
 {
 	float d;
 	float inf = 1e20f;
-	t = inf;
+	isect->t = inf;
+    int id;
 	for (GeometryList::size_type i = 0; i < geometry.size(); ++i) {
 		d = geometry[i].intersect(ray);
-		if (d < t) {
-			t = d;
+		if (d < isect->t) {
+			isect->t = d;
 			id = i;
 		}
 	}
+    if (isect->t < inf) {
+        isect->normal = normal((ray.orig + isect->t * ray.dir) -
+            geometry[id].position);
+        isect->bsdf = geometry[id].bsdf.get();
+    }
 
     RayHitInfo hitInfo;
-    if (triangle.intersect(ray, &hitInfo))
-        t = inf;
+    if (cube.intersect(ray, &hitInfo) && hitInfo.t < isect->t) {
+        *isect = hitInfo;
+    }
 
-	return t < inf;
+	return isect->t < inf;
 }
 
 auto light = PointLight(
@@ -217,18 +253,17 @@ auto light = PointLight(
 	Vector3f(5000.0f, 5000.0f, 5000.0f)
 );
 
-bool traceShadow(const Ray& ray, float maxT)
+inline bool traceShadow(const Ray& ray, float maxT)
 {
-	float t = 1e20f;
-	int id = -1;
-	if (intersect(ray, t, id) && t < maxT)
+    RayHitInfo localIsect;
+	if (intersect(ray, &localIsect) && localIsect.t < maxT)
 		return true;
 
 	return false;
 }
 
 template <typename T>
-static bool absEqEps(T value, T comparison, T eps)
+static inline bool absEqEps(T value, T comparison, T eps)
 {
 	return std::abs(std::abs(value) - std::abs(comparison)) < eps;
 }
@@ -259,15 +294,13 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	using std::abs;
 	using std::cos;
 	using std::sin;
-	float t;
-	int id;
 
 	Rng rng(pixelIdx);
 	auto finalColor = Spectrum(0.0f);
-	for (int k = 0; k < 100; ++k) {
+    RayHitInfo isect;
+	for (int k = 0; k < 10; ++k) {
 		Spectrum color = Spectrum(0.0f);
 		Vector3f pathWeight = Vector3f(1.0f);
-		id = -1;
 
         auto currentRay = camera.sample(
             x + rng.randomFloat() - 0.5,
@@ -275,7 +308,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
         );
 
 		for (int i = 0; i < 5; ++i) {
-			if (!intersect(currentRay, t, id))
+			if (!intersect(currentRay, &isect))
 				break;
 
 			/*
@@ -283,9 +316,8 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 			 * wi - incident direction
 			 * wo - outgoing direction
 			 */
-			const Sphere& sphere = geometry[id];
-			Vector3f intersection = currentRay.orig + (currentRay.dir * t);
-			Vector3f norm = normal(intersection - sphere.position);
+			Vector3f intersection = currentRay.orig + (currentRay.dir * isect.t);
+			Vector3f norm = isect.normal;
 			Vector3f nl = dot(norm, currentRay.dir) < 0.0f ? norm : norm * -1.0f;
 
 			auto hitFrame = Frame(norm);
@@ -302,7 +334,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 				float maxT = length(intersection - light.position());
 				if (!traceShadow(lightRay, maxT)) {
 					if (light.isDelta()) {
-						Spectrum f = sphere.bsdf->f(wo, wi);
+						Spectrum f = isect.bsdf->f(wo, wi);
 						color = color + (pointwise(pathWeight,
 							pointwise(f, lightEmission))
 							* (std::abs(dot(nl, wi)) / pdf));
@@ -319,7 +351,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 			{
 				Vector3f wi;
 				float pdf;
-				Spectrum refl = sphere.bsdf->sample(wo, &wi, rng.randomFloat(),
+				Spectrum refl = isect.bsdf->sample(wo, &wi, rng.randomFloat(),
 					rng.randomFloat(), &pdf);
 
 				if ((refl.x + refl.y + refl.z) / 3.0f == 0.0f)
@@ -332,7 +364,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 				currentRay = { intersection + dir * EPS, dir };
 			}
 		}
-		finalColor = finalColor + (color * 0.01f);
+		finalColor = finalColor + (color * 0.1f);
 	}
 
     framebuffer.set(x, y, finalColor);

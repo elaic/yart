@@ -9,8 +9,10 @@
 
 struct RayHitInfo {
     float t;
+    Vector3f normal;
     float u;
     float v;
+    Bsdf* bsdf;
 };
 
 // This is the traditional triangle implementation. While it is memory
@@ -54,7 +56,7 @@ inline bool intersect(const Ray& ray, const Triangle& triangle,
     const auto invDet = 1.0f / det;
 
     const auto& tvec = ray.orig - v0;
-    hitInfo->u = dot(tvec, pvec) * invDet; // TODO: this is out variable
+    hitInfo->u = dot(tvec, pvec) * invDet;
     if (hitInfo->u < 0 || hitInfo->u > 1)
         return false;
 
@@ -82,14 +84,30 @@ public:
     {
         RayHitInfo localHitInfo;
         auto currentT = std::numeric_limits<float>::max();
-        for (const auto& triangle : triangles_) {
-            if (::intersect(ray, triangle, points_, &localHitInfo) &&
+        auto hitId = -1;
+        for (size_t i = 0; i < triangles_.size(); ++i) {
+            if (::intersect(ray, triangles_[i], points_, &localHitInfo) &&
                 localHitInfo.t < currentT && localHitInfo.t > 0.0f) {
                 *hitInfo = localHitInfo;
                 currentT = localHitInfo.t;
+                hitId = i;
             }
         }
+
+        // Calculate geometric normal if a triangle was hit
+        if (hitId >= 0) {
+            const auto& t = triangles_[hitId];
+            const auto& e1 = points_[t.idx1] - points_[t.idx0];
+            const auto& e2 = points_[t.idx2] - points_[t.idx0];
+            hitInfo->normal = normal(cross(e1, e2));
+            hitInfo->bsdf = bsdf_.get();
+        }
         return currentT < std::numeric_limits<float>::max() && currentT > 0.0f;
+    }
+
+    inline Bsdf* getBsdf()
+    {
+        return bsdf_.get();
     }
 
 private:

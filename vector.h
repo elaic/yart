@@ -71,22 +71,22 @@ struct TVector3 {
 		return TVector3(x / rhs.x, y / rhs.y, z / rhs.z);
 	}
 
-	inline TVector3 operator+(const T& rhs) const
+	inline TVector3 operator+(const T rhs) const
 	{
 		return TVector3(x + rhs, y + rhs, z + rhs);
 	}
 
-	inline TVector3 operator-(const T& rhs) const
+	inline TVector3 operator-(const T rhs) const
 	{
 		return TVector3(x - rhs, y - rhs, z - rhs);
 	}
 
-	inline TVector3 operator*(const T& rhs) const
+	inline TVector3 operator*(const T rhs) const
 	{
 		return TVector3(x * rhs, y * rhs, z * rhs);
 	}
 
-	inline TVector3 operator/(const T& rhs) const
+	inline TVector3 operator/(const T rhs) const
 	{
 		assert(rhs != 0.0f);
 		return TVector3(x / rhs, y / rhs, z / rhs);
@@ -163,7 +163,7 @@ inline T dot(const TVector3<T>& lhs, const TVector3<T>& rhs)
 }
 
 template <typename T>
-inline TVector3<T> cross(const TVector3<T> lhs, const TVector3<T>& rhs)
+inline TVector3<T> cross(const TVector3<T>& lhs, const TVector3<T>& rhs)
 {
 	return lhs.cross(rhs);
 }
