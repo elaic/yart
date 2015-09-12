@@ -1,5 +1,7 @@
+bin/
 build/
 *.swp
 *.DS_Store
 *.ppm
 *.bmp
+*.pyc

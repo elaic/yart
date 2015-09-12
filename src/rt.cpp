@@ -147,32 +147,42 @@ struct Sphere {
 
 	inline float intersect(const Ray& ray) const
 	{
+        static const float EPS_S = 0.0f;
 		Vector3f op = position - ray.orig;
-		float t;
-		auto b = op.dot(ray.dir);
-		auto det = b * b - op.length2() + radius * radius;
+		double b = dot(op, ray.dir);
+		double det = b * b - op.length2() + radius * radius;
 		if (det < 0)
 			return 1e20;
 		else
 			det = std::sqrt(det);
 
-		return (t = b - det) > 1e-4 ? t : ((t = b + det) > 1e-4 ? t : 1e20);
+        float t = b - det;
+        if (t > EPS_S) {
+            return t;
+        }
+        else {
+            t = b + det;
+            if (t > EPS_S)
+                return t;
+            else
+                return 1e20;
+        }
 	}
 };
 
 using GeometryList = std::vector<Sphere>;
 GeometryList geometry = {
-	Sphere(1e5f, Vector3f(1e5f + 1.0f, 40.8f, 81.6f),
+	Sphere(1e4f, Vector3f(1e4f + 1.0f, 40.8f, 81.6f),
 		Vector3f(0.75f, 0.25f, 0.25f), Bxdf::Diff),
-	Sphere(1e5f, Vector3f(-1e5f + 99.0f, 40.8f, 81.6f),
-		Vector3f(0.99f, 0.99f, 0.99f), Bxdf::FresSpec),
-	Sphere(1e5f, Vector3f(50.0f, 40.8f, 1e5f),
+	Sphere(1e4f, Vector3f(-1e4f + 99.0f, 40.8f, 81.6f),
+		Vector3f(0.25f, 0.25f, 0.75f), Bxdf::Diff),
+	Sphere(1e4f, Vector3f(50.0f, 40.8f, 1e4f),
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
-	Sphere(1e5f, Vector3f(50.0f, 40.8f, -1e5f + 170.0f),
+	Sphere(1e4f, Vector3f(50.0f, 40.8f, -1e4f + 170.0f),
 		Vector3f(0.25f, 0.75f, 0.25f), Bxdf::Diff),
-	Sphere(1e5f, Vector3f(50.0f, 1e5f, 81.6f),
+	Sphere(1e4f, Vector3f(50.0f, 1e4f, 81.6f),
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
-	Sphere(1e5f, Vector3f(50.0f, -1e5f + 81.6f, 81.6f),
+	Sphere(1e4f, Vector3f(50.0f, -1e4f + 81.6f, 81.6f),
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
 	Sphere(16.5f, Vector3f(27.0f, 16.5f, 47.0f),
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::FresSpec),
@@ -211,20 +221,10 @@ auto cube = TriangleMesh(
     //std::make_shared<FresnelDielectric>(Spectrum(0.8f, 0.8f, 0.8f), 1.33f)
 );
 
-/*
-struct IntersectionResult {
-    Vector3f normal;
-    float t;
-    // Intersection stores a pointer because it doesn't own the bsdf, it just
-    // uses it.
-    Bsdf* bsdf;
-};
-*/
-
 inline bool intersect(const Ray& ray, RayHitInfo* const isect)
 {
+	static const float inf = 1e20f;
 	float d;
-	float inf = 1e20f;
 	isect->t = inf;
     int id;
 	for (GeometryList::size_type i = 0; i < geometry.size(); ++i) {
@@ -298,7 +298,9 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	Rng rng(pixelIdx);
 	auto finalColor = Spectrum(0.0f);
     RayHitInfo isect;
-	for (int k = 0; k < 10; ++k) {
+    static const int maxIter = 1000;
+    static const float invMaxIter = 1.0f / maxIter;
+	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color = Spectrum(0.0f);
 		Vector3f pathWeight = Vector3f(1.0f);
 
@@ -346,8 +348,8 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 			}
 
 			/*
-			 * continue tracing
-			 */
+             * continue tracing
+             */
 			{
 				Vector3f wi;
 				float pdf;
@@ -361,10 +363,10 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 
 				pathWeight = pointwise(pathWeight, refl) *
 					std::abs(dot(dir, nl)) * (1.0f / pdf);
-				currentRay = { intersection + dir * EPS, dir };
+				currentRay = { intersection + dir * 1e-2, dir };
 			}
 		}
-		finalColor = finalColor + (color * 0.1f);
+		finalColor = finalColor + (color * invMaxIter);
 	}
 
     framebuffer.set(x, y, finalColor);
@@ -435,7 +437,6 @@ void tileTask()
         {
             LockGuard lock(runMutex);
             int unfinished = --numUnfinished;
-            //printf("%i\n", unfinished);
             if (unfinished <= 0)
             {
                 runCondition.notify_one();

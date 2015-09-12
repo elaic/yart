@@ -133,7 +133,7 @@ inline bool sameHemisphere(const Vector3f& w, const Vector3f& w1)
 inline Spectrum fresnelDielectric(float cosi, float cost, const Spectrum& etai,
 	const Spectrum& etat)
 {
-	Spectrum Rparallel = 
+	Spectrum Rparallel =
 		((etat * cosi) - (etai * cost)) /
 		((etat * cosi) + (etai * cost));
 	Spectrum Rperpendicular =
