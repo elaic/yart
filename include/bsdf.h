@@ -7,7 +7,7 @@
 #include <cstdio>
 
 namespace {
-	static const float COS_EPS = 1e-4;
+	static const float COS_EPS = 1e-4f;
 }
 
 template <typename T>
@@ -66,7 +66,7 @@ inline Vector3f cosHemisphereSample(float u1, float u2)
 	return ret;
 }
 
-inline float cosHemispherePdf(float cosTheta, float phi)
+inline float cosHemispherePdf(float cosTheta, float /*phi*/)
 {
 	return cosTheta * INV_PI;
 }
@@ -194,6 +194,8 @@ public:
 
 	virtual Spectrum f(const Vector3f& wo, const Vector3f& wi) const override
 	{
+		((void)wo);
+		((void)wi);
 		return reflectance_ * INV_PI;
 	}
 
@@ -219,12 +221,16 @@ public:
 
 	virtual Spectrum f(const Vector3f& wo, const Vector3f& wi) const override
 	{
+		(void(wo));
+		(void(wi));
 		return Spectrum(0.0f, 0.0f, 0.0f);
 	}
 
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override
 	{
+		(void(u1));
+		(void(u2));
 		wi->x = -wo.x;
 		wi->y = -wo.y;
 		wi->z = wo.z;
@@ -247,12 +253,16 @@ public:
 
 	virtual Spectrum f(const Vector3f& wo, const Vector3f& wi) const override
 	{
+		(void(wo));
+		(void(wi));
 		return Spectrum(0.0f, 0.0f, 0.0f);
 	}
 
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override
 	{
+		(void(u1));
+		(void(u2));
 		bool entering = cosTheta(wo) > 0;
 		float eta = entering ? 1.0f / eta_ : eta_;
 		float sini2 = sinTheta2(wo);
@@ -289,12 +299,16 @@ public:
 
 	virtual Spectrum f(const Vector3f& wo, const Vector3f& wi) const override
 	{
+		(void(wo));
+		(void(wi));
 		return Spectrum(0.0f);
 	}
 
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override
 	{
+		(void(u1));
+		(void(u2));
 		wi->x = -wo.x;
 		wi->y = -wo.y;
 		wi->z = wo.z;
@@ -321,12 +335,15 @@ public:
 
 	virtual Spectrum f(const Vector3f& wo, const Vector3f& wi) const override
 	{
+		(void(wo));
+		(void(wi));
 		return Spectrum(0.0f);
 	}
 
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override
 	{
+		(void(u2));
 		bool entering = cosTheta(wo) > 0;
 		float eta = entering ? 1.0f / eta_ : eta_;
 		float sini2 = sinTheta2(wo);
@@ -360,7 +377,7 @@ public:
 			return pointwise(fresnel, reflectance_) / absCosTheta(*wi);
 		} else {
 			// refraction
-			float cost = std::sqrt(std::max(0.0f, 1.0f - sint2));
+			cost = std::sqrt(std::max(0.0f, 1.0f - sint2));
 			if (entering) cost = -cost;
 
 			float sintOverSini = eta;

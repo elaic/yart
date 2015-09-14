@@ -147,25 +147,25 @@ struct Sphere {
 
 	inline float intersect(const Ray& ray) const
 	{
-        static const float EPS_S = 0.0f;
+        static const double EPS_S = 0.0f;
 		Vector3f op = position - ray.orig;
 		double b = dot(op, ray.dir);
 		double det = b * b - op.length2() + radius * radius;
 		if (det < 0)
-			return 1e20;
+			return 1e20f;
 		else
 			det = std::sqrt(det);
 
-        float t = b - det;
+        double t = b - det;
         if (t > EPS_S) {
-            return t;
+            return static_cast<float>(t);
         }
         else {
             t = b + det;
             if (t > EPS_S)
-                return t;
+                return static_cast<float>(t);
             else
-                return 1e20;
+                return 1e20f;
         }
 	}
 };
@@ -226,8 +226,9 @@ inline bool intersect(const Ray& ray, RayHitInfo* const isect)
 	static const float inf = 1e20f;
 	float d;
 	isect->t = inf;
-    int id;
-	for (GeometryList::size_type i = 0; i < geometry.size(); ++i) {
+	// not sure if this is safe, but probably better than uninitialized
+    int id = -1;
+	for (auto i = 0; i < geometry.size(); ++i) {
 		d = geometry[i].intersect(ray);
 		if (d < isect->t) {
 			isect->t = d;
@@ -298,15 +299,15 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	Rng rng(pixelIdx);
 	auto finalColor = Spectrum(0.0f);
     RayHitInfo isect;
-    static const int maxIter = 1000;
+    static const int maxIter = 1;
     static const float invMaxIter = 1.0f / maxIter;
 	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color = Spectrum(0.0f);
 		Vector3f pathWeight = Vector3f(1.0f);
 
         auto currentRay = camera.sample(
-            x + rng.randomFloat() - 0.5,
-            y + rng.randomFloat() - 0.5
+            x + rng.randomFloat() - 0.5f,
+            y + rng.randomFloat() - 0.5f
         );
 
 		for (int i = 0; i < 5; ++i) {
@@ -363,7 +364,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 
 				pathWeight = pointwise(pathWeight, refl) *
 					std::abs(dot(dir, nl)) * (1.0f / pdf);
-				currentRay = { intersection + dir * 1e-2, dir };
+				currentRay = { intersection + dir * 1e-2f, dir };
 			}
 		}
 		finalColor = finalColor + (color * invMaxIter);
@@ -392,7 +393,7 @@ std::mutex runMutex;
 std::condition_variable runCondition;
 semaphore taskSemahore(0);
 
-int32_t numUnfinished = 0;
+size_t numUnfinished = 0;
 
 static const int32_t numWorkers = 8;
 
@@ -436,7 +437,7 @@ void tileTask()
 
         {
             LockGuard lock(runMutex);
-            int unfinished = --numUnfinished;
+            auto unfinished = --numUnfinished;
             if (unfinished <= 0)
             {
                 runCondition.notify_one();
@@ -478,8 +479,6 @@ int main(int /*argc*/, const char* /*argv*/[])
 {
 	using std::abs;
     static const int32_t tileSize = 32;
-
-    Rng jitter(0);
 
     Vector2i numFullTiles;
     numFullTiles.x = width / tileSize;

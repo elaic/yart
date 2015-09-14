@@ -14,7 +14,7 @@ bool Bitmap::write(const std::string& name)
 {
 	bool success = false;
 
-	int32_t rowSize = std::floor((24 * width_ + 31) / 32) * 4;
+	int32_t rowSize = ((24 * width_ + 31) / 32) * 4;
 
 	std::ofstream out(name);
 

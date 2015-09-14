@@ -85,7 +85,7 @@ public:
         RayHitInfo localHitInfo;
         auto currentT = std::numeric_limits<float>::max();
         auto hitId = -1;
-        for (size_t i = 0; i < triangles_.size(); ++i) {
+        for (auto i = 0; i < triangles_.size(); ++i) {
             if (::intersect(ray, triangles_[i], points_, &localHitInfo) &&
                 localHitInfo.t < currentT && localHitInfo.t > 0.0f) {
                 *hitInfo = localHitInfo;

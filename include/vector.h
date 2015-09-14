@@ -65,7 +65,7 @@ struct TVector3 {
 	 * THIS IS TEMPORARY!!!
 	 * When spectrum class is implemented, delete this
 	 */
-	[[deprecated]]
+	//[[deprecated]]
 	inline TVector3 operator/(const TVector3& rhs)
 	{
 		return TVector3(x / rhs.x, y / rhs.y, z / rhs.z);
