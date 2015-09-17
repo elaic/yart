@@ -109,9 +109,6 @@ enum Bxdf : int32_t {
 struct Sphere {
 	float radius;
 	Vector3f position;
-	// This should be unique_ptr, as the pointer is never shared, but
-	// there is a compilation error. Investigate further.
-//	std::unique_ptr<Bsdf> bsdf;
 	std::shared_ptr<Bsdf> bsdf;
 
 	Sphere(float radius, Vector3f position, Vector3f color, Bxdf bxdf)
@@ -120,17 +117,14 @@ struct Sphere {
 	{
 		switch (bxdf) {
 			case Bxdf::Diff:
-//				bsdf = std::make_unique<Lambertian>(color);
 				bsdf = std::make_shared<Lambertian>(color);
 				break;
 
 			case Bxdf::Spec:
-//				bsdf = std::make_unique<Lambertian>(color);
 				bsdf = std::make_shared<PerfectConductor>(color);
 				break;
 
 			case Bxdf::Trans:
-//				bsdf = std::make_unique<Lambertian>(color);
 				bsdf = std::make_shared<PerfectDielectric>(color, 1.33f);
 				break;
 
@@ -269,8 +263,8 @@ static inline bool absEqEps(T value, T comparison, T eps)
 	return std::abs(std::abs(value) - std::abs(comparison)) < eps;
 }
 
-int32_t width = 1024;
-int32_t height = 768;
+int32_t width = 513;
+int32_t height = 512;
 
 auto camera = Camera(
     Vector3f(50.0f, 48.0f, 295.6f),
@@ -299,7 +293,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	Rng rng(pixelIdx);
 	auto finalColor = Spectrum(0.0f);
     RayHitInfo isect;
-    static const int maxIter = 1;
+    static const int maxIter = 50;
     static const float invMaxIter = 1.0f / maxIter;
 	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color = Spectrum(0.0f);
