@@ -17,6 +17,7 @@
 #include "constants.h"
 #include "frame.h"
 #include "rng.h"
+#include "timer.h"
 #include "vector.h"
 
 #include "bsdf.h"
@@ -346,6 +347,9 @@ void trace(int pixelIdx, int32_t x, int32_t y)
              * continue tracing
              */
 			{
+				// TODO: this should probably be something different than just
+				// average, since some portions of spectrum are more important
+				// to human eye that others
 				float continueProbability = (pathWeight.x + pathWeight.y + pathWeight.z) / 3;
 				if (rng.randomFloat() > continueProbability)
 					break;
@@ -499,12 +503,21 @@ int main(int /*argc*/, const char* /*argv*/[])
         }
     }
 
+	Timer timer;
+	timer.start();
     enqueuTiles(tiles);
     runTiles();
     waitForCompletion();
     workQueueShutdown();
+	auto elapsed = timer.elapsed();
+	auto seconds = elapsed.count() / 1e9;
+
+	printf("Time spent rendering: %f\n", seconds);
 
 	framebuffer.write("image.bmp");
+
+	int a;
+	std::cin >> a;
 
 	return 0;
 }

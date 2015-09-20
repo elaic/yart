@@ -29,6 +29,7 @@ set(INCLUDES
 	${INCL}/light.h
 	${INCL}/rng.h
 	${INCL}/scheduler.h
+	${INCL}/timer.h
 	${INCL}/triangle.h
 	${INCL}/vector.h)
 
