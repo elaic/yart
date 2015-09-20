@@ -263,8 +263,8 @@ static inline bool absEqEps(T value, T comparison, T eps)
 	return std::abs(std::abs(value) - std::abs(comparison)) < eps;
 }
 
-int32_t width = 513;
-int32_t height = 512;
+int32_t width = 1024;
+int32_t height = 768;
 
 auto camera = Camera(
     Vector3f(50.0f, 48.0f, 295.6f),
@@ -346,6 +346,11 @@ void trace(int pixelIdx, int32_t x, int32_t y)
              * continue tracing
              */
 			{
+				float continueProbability = (pathWeight.x + pathWeight.y + pathWeight.z) / 3;
+				if (rng.randomFloat() > continueProbability)
+					break;
+
+				pathWeight /= continueProbability;
 				Vector3f wi;
 				float pdf;
 				Spectrum refl = isect.bsdf->sample(wo, &wi, rng.randomFloat(),

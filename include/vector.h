@@ -65,7 +65,7 @@ struct TVector3 {
 	 * THIS IS TEMPORARY!!!
 	 * When spectrum class is implemented, delete this
 	 */
-	//[[deprecated]]
+	[[deprecated]]
 	inline TVector3 operator/(const TVector3& rhs)
 	{
 		return TVector3(x / rhs.x, y / rhs.y, z / rhs.z);
@@ -90,6 +90,39 @@ struct TVector3 {
 	{
 		assert(rhs != 0.0f);
 		return TVector3(x / rhs, y / rhs, z / rhs);
+	}
+
+	inline TVector3& operator+=(const T rhs)
+	{
+		x += rhs;
+		y += rhs;
+		z += rhs;
+		return *this;
+	}
+
+	inline TVector3& operator-=(const T rhs)
+	{
+		x -= rhs;
+		y -= rhs;
+		z -= rhs;
+		return *this;
+	}
+
+	inline TVector3& operator*=(const T rhs)
+	{
+		x *= rhs;
+		y *= rhs;
+		z *= rhs;
+		return *this;
+	}
+
+	inline TVector3& operator/=(const T rhs)
+	{
+		auto inv = T(1) / rhs;
+		x *= inv;
+		y *= inv;
+		z *= inv;
+		return *this;
 	}
 
 	inline T length() const
