@@ -180,6 +180,50 @@ inline Spectrum fresnelConductor(float cosi, const Spectrum& eta,
 	return (Rparl2 + Rperp2) / 2.0f;
 }
 
+class MicrofacetDistribution {
+public:
+	virtual float d(const Vector3f& wh) const = 0;
+	virtual void sample(const Vector3f& wo, Vector3f* wi,
+		float u1, float u2, float* pdf) const = 0;
+};
+
+class Blinn : public MicrofacetDistribution {
+public:
+	Blinn(float exponent)
+	{
+		exponent_ = std::min(exponent, 10000.0f);
+	}
+
+	virtual float d(const Vector3f& wh) const override
+	{
+		float cosTetaH = absCosTheta(wh);
+		return (exponent_ + 2.0f) * INV_2PI * std::pow(cosTetaH, exponent_);
+	}
+
+	virtual void sample(const Vector3f& wo, Vector3f* wi, float u1,
+		float u2, float* pdf) const override
+	{
+		float cosTheta = std::pow(u1, 1.0f / (exponent_ + 1.0f));
+		float sinTheta = std::sqrt(std::max(0.0f, 1.0f - cosTheta * cosTheta));
+		float phi = u2 * 2.0f * PI;
+		Vector3f wh = sphericalDirection(sinTheta, cosTheta, phi);
+
+		if (!sameHemisphere(wo, wh))
+			wh = -wh;
+		*wi = -wo + 2.0f * dot(wo, wh) * wh;
+
+		float blinnPdf = ((exponent_ + 1.0f) * std::pow(cosTheta, exponent_)) /
+			(2.0f * PI * 4.0f * dot(wo, wh));
+		if (dot(wo, wh) < 0.0f) 
+			blinnPdf = 0.0f;
+
+		*pdf = blinnPdf;
+	}
+
+private:
+	float exponent_;
+};
+
 class Bsdf {
 public:
 	virtual Spectrum f(const Vector3f& wo, const Vector3f& wi) const = 0;
@@ -392,6 +436,66 @@ public:
 private:
 	Spectrum reflectance_;
 	float eta_;
+};
+
+/*
+ * TorranceSparrow microfacet brdf for conductors
+ */
+class TorranceSparrowConductor : public Bsdf {
+public:
+	TorranceSparrowConductor(const Spectrum& reflectance,
+		const Spectrum& eta, const Spectrum& k, float exponent)
+		: reflectance_(reflectance)
+		, eta_(eta)
+		, k_(k)
+	{
+		distribution_ = std::make_unique<Blinn>(exponent);
+	}
+
+	virtual Spectrum f(const Vector3f& wo, const Vector3f& wi) const override
+	{
+		float cosThetaO = absCosTheta(wo);
+		float cosThetaI = absCosTheta(wi);
+		if (cosThetaI == 0.0f || cosThetaO == 0.0f)
+			return Spectrum(0.0f);
+
+		Vector3f wh = normal(wo + wi);
+		float cosThetaH = dot(wi, wh);
+		Spectrum f = fresnelConductor(cosThetaH, eta_, k_);
+		return pointwise(reflectance_, f) * distribution_->d(wh) * G(wo, wi, wh) /
+			(4.0f * cosThetaI * cosThetaO);
+	}
+
+	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi,
+		float u1, float u2, float* pdf) const override
+	{
+		distribution_->sample(wo, wi, u1, u2, pdf);
+		if (!sameHemisphere(wo, *wi))
+			return Spectrum(0.0f);
+
+		return f(wo, *wi);
+	}
+
+	float G(const Vector3f& wo, const Vector3f& wi, const Vector3f& wh) const
+	{
+		float nDotWh = absCosTheta(wh);
+		float nDotWo = absCosTheta(wo);
+		float nDotWi = absCosTheta(wi);
+		float woDotWh = std::abs(dot(wo, wh));
+		return std::min(
+			1.0f, 
+			std::min(
+				2.0f * nDotWh * nDotWo /woDotWh,
+				2.0f * nDotWh * nDotWi / woDotWh
+				)
+			);
+	}
+
+private:
+	Spectrum reflectance_;
+	Spectrum eta_;
+	Spectrum k_;
+	std::unique_ptr<MicrofacetDistribution> distribution_;
 };
 
 #endif // BSDF_H

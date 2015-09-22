@@ -207,6 +207,16 @@ inline TVector3<T> normal(const TVector3<T>& v)
 	return v.normal();
 }
 
+template <typename T>
+inline TVector3<T> sphericalDirection(T sinTheta, T cosTheta, T phi)
+{
+	return TVector3<T>(
+			sinTheta * std::cos(phi),
+			sinTheta * std::sin(phi),
+			cosTheta
+		);
+}
+
 using Vector3f = TVector3<float>;
 using Vector3i = TVector3<int32_t>;
 

@@ -105,6 +105,7 @@ enum Bxdf : int32_t {
 	Trans,
 	FresSpec,
 	FresTran,
+	TorranceSparrow,
 };
 
 struct Sphere {
@@ -135,7 +136,15 @@ struct Sphere {
 				break;
 
 			case Bxdf::FresTran:
-				bsdf = std::make_shared<FresnelDielectric>(color, 1.33f);
+				bsdf = std::make_shared<FresnelDielectric>(color, 1.66f);
+				break;
+
+			case Bxdf::TorranceSparrow:
+				bsdf = std::make_shared<TorranceSparrowConductor>(
+					color,
+					Spectrum(0.16f, 0.55f, 1.75f), 
+					Spectrum(4.6f, 2.2f, 1.9f),
+					1000.0f);
 				break;
 		}
 	}
@@ -167,16 +176,22 @@ struct Sphere {
 
 using GeometryList = std::vector<Sphere>;
 GeometryList geometry = {
+	// Left wall
 	Sphere(1e4f, Vector3f(1e4f + 1.0f, 40.8f, 81.6f),
 		Vector3f(0.75f, 0.25f, 0.25f), Bxdf::Diff),
+	// Right wall
 	Sphere(1e4f, Vector3f(-1e4f + 99.0f, 40.8f, 81.6f),
 		Vector3f(0.25f, 0.25f, 0.75f), Bxdf::Diff),
+	// Front wall
 	Sphere(1e4f, Vector3f(50.0f, 40.8f, 1e4f),
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
+	// Wall behind camera
 	Sphere(1e4f, Vector3f(50.0f, 40.8f, -1e4f + 170.0f),
 		Vector3f(0.25f, 0.75f, 0.25f), Bxdf::Diff),
+	// Floor
 	Sphere(1e4f, Vector3f(50.0f, 1e4f, 81.6f),
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
+
 	Sphere(1e4f, Vector3f(50.0f, -1e4f + 81.6f, 81.6f),
 		Vector3f(0.75f, 0.75f, 0.75f), Bxdf::Diff),
 	Sphere(16.5f, Vector3f(27.0f, 16.5f, 47.0f),
@@ -184,7 +199,7 @@ GeometryList geometry = {
 	Sphere(16.5f, Vector3f(73.0f, 16.5f, 88.0f),
 		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::FresTran),
 	Sphere(8.5f, Vector3f(50.0f, 8.5f, 60.0f),
-		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::Diff),
+		Vector3f(0.999f, 0.999f, 0.999f), Bxdf::TorranceSparrow),
 };
 
 auto cube = TriangleMesh(
@@ -212,8 +227,9 @@ auto cube = TriangleMesh(
         Triangle(0, 6, 4), // bottom
         Triangle(0, 2, 6),
     },
-    std::make_shared<Lambertian>(Spectrum(0.1f, 0.3f, 0.7f))
-    //std::make_shared<FresnelDielectric>(Spectrum(0.8f, 0.8f, 0.8f), 1.33f)
+    //std::make_shared<Lambertian>(Spectrum(0.1f, 0.3f, 0.7f))
+	std::make_shared<FresnelConductor>(Vector3f(0.999f, 0.999f, 0.999f),
+		Spectrum(0.16f, 0.55f, 1.75f), Spectrum(4.6f, 2.2f, 1.9f))
 );
 
 inline bool intersect(const Ray& ray, RayHitInfo* const isect)
@@ -276,6 +292,7 @@ auto camera = Camera(
 );
 
 auto framebuffer = Bitmap(width, height);
+auto framebufferSecondary = Bitmap(width, height);
 
 struct Tile {
     Vector2i start;
@@ -293,11 +310,13 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 
 	Rng rng(pixelIdx);
 	auto finalColor = Spectrum(0.0f);
+	auto finalColorSecondary = Spectrum(0.0f);
     RayHitInfo isect;
-    static const int maxIter = 50;
+    static const int maxIter = 25000;
     static const float invMaxIter = 1.0f / maxIter;
 	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color = Spectrum(0.0f);
+		Spectrum secondaryColor = Spectrum(0.0f);
 		Vector3f pathWeight = Vector3f(1.0f);
 
         auto currentRay = camera.sample(
@@ -336,6 +355,11 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 						color = color + (pointwise(pathWeight,
 							pointwise(f, lightEmission))
 							* (std::abs(dot(nl, wi)) / pdf));
+						if (i > 0) {
+							secondaryColor = secondaryColor + (pointwise(pathWeight,
+								pointwise(f, lightEmission))
+								* (std::abs(dot(nl, wi)) / pdf));
+						}
 					} else {
 						assert(false);
 						color = Spectrum(0.0f);
@@ -371,9 +395,11 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 			}
 		}
 		finalColor = finalColor + (color * invMaxIter);
+		finalColorSecondary = finalColorSecondary + (secondaryColor * invMaxIter);
 	}
 
     framebuffer.set(x, y, finalColor);
+	framebufferSecondary.set(x, y, finalColorSecondary);
 }
 
 void processTile(Tile tile)
@@ -515,6 +541,7 @@ int main(int /*argc*/, const char* /*argv*/[])
 	printf("Time spent rendering: %f\n", seconds);
 
 	framebuffer.write("image.bmp");
+	framebufferSecondary.write("image-secondary.bmp");
 
 	int a;
 	std::cin >> a;
