@@ -1,10 +1,11 @@
 #if !defined(BSDF_H)
 #define BSDF_H
 
+#include <algorithm>
+#include <cstdio>
+
 #include "constants.h"
 #include "vector.h"
-
-#include <cstdio>
 
 namespace {
 	static const float COS_EPS = 1e-4f;
@@ -16,7 +17,7 @@ T clamp(T val, T min, T max)
 	return std::min(std::max(val, min), max);
 }
 
-void concentricSampleDisk(float u1, float u2, float* dx, float* dy)
+inline void concentricSampleDisk(float u1, float u2, float* dx, float* dy)
 {
 	using std::cos;
 	using std::sin;
@@ -144,13 +145,13 @@ inline Spectrum fresnelDielectric(float cosi, float cost, const Spectrum& etai,
 }
 
 template <int n>
-float pow(float val)
+inline float pow(float val)
 {
 	return val * pow<n - 1>(val);
 }
 
 template<>
-float pow<1>(float val)
+inline float pow<1>(float val)
 {
 	return val;
 }

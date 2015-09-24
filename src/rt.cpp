@@ -17,162 +17,13 @@
 #include "constants.h"
 #include "frame.h"
 #include "rng.h"
+#include "semaphore.h"
 #include "timer.h"
 #include "vector.h"
 
-#include "bsdf.h"
 #include "light.h"
+#include "sphere.h"
 #include "triangle.h"
-
-template <typename T>
-class range {
-	static_assert(std::is_integral<T>::value, "Ranges only work for int types");
-public:
-	class iterator {
-		friend class range;
-	public:
-		T operator*() const { return i_; }
-		const iterator& operator++() { ++i_; return *this; }
-		iterator operator++(int) { iterator copy(*this); ++i_; return copy; }
-
-		bool operator==(const iterator& rhs) { return i_ == rhs.i_; }
-		bool operator!=(const iterator& rhs) { return i_ != rhs.i_; }
-
-	protected:
-		iterator(T i) : i_(i) { }
-
-	private:
-		T i_;
-	};
-
-	iterator begin() const { return begin_; }
-	iterator end() const { return end_; }
-	range(T begin, T end) : begin_(begin), end_(end) { }
-
-private:
-	iterator begin_;
-	iterator end_;
-};
-
-template <typename T>
-typename range<T>::iterator begin(const range<T>& range)
-{
-	return range.begin();
-}
-
-template <typename T>
-typename range<T>::iterator end(const range<T>& range)
-{
-	return range.end();
-}
-
-class semaphore {
-public:
-    semaphore(int32_t count) : count_(count) { }
-
-    ~semaphore() = default;
-
-    semaphore(const semaphore& copy) = delete;
-    semaphore(semaphore&& move) = default;
-
-    semaphore& operator=(const semaphore& copy) = delete;
-    semaphore& operator=(semaphore&& move) = default;
-
-    inline void post()
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        ++count_;
-        condition_.notify_one();
-    }
-
-    inline void wait()
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        while (count_ == 0)
-            condition_.wait(lock);
-        --count_;
-    }
-
-private:
-    int32_t count_;
-    std::mutex mutex_;
-    std::condition_variable condition_;
-};
-
-enum Bxdf : int32_t {
-	Diff,
-	Spec,
-	Trans,
-	FresSpec,
-	FresTran,
-	TorranceSparrow,
-};
-
-struct Sphere {
-	float radius;
-	Vector3f position;
-	std::shared_ptr<Bsdf> bsdf;
-
-	Sphere(float radius, Vector3f position, Vector3f color, Bxdf bxdf)
-		: radius(radius)
-		, position(position)
-	{
-		switch (bxdf) {
-			case Bxdf::Diff:
-				bsdf = std::make_shared<Lambertian>(color);
-				break;
-
-			case Bxdf::Spec:
-				bsdf = std::make_shared<PerfectConductor>(color);
-				break;
-
-			case Bxdf::Trans:
-				bsdf = std::make_shared<PerfectDielectric>(color, 1.33f);
-				break;
-
-			case Bxdf::FresSpec:
-				bsdf = std::make_shared<FresnelConductor>(color,
-					Spectrum(0.16f, 0.55f, 1.75f), Spectrum(4.6f, 2.2f, 1.9f));
-				break;
-
-			case Bxdf::FresTran:
-				bsdf = std::make_shared<FresnelDielectric>(color, 1.66f);
-				break;
-
-			case Bxdf::TorranceSparrow:
-				bsdf = std::make_shared<TorranceSparrowConductor>(
-					color,
-					Spectrum(0.16f, 0.55f, 1.75f), 
-					Spectrum(4.6f, 2.2f, 1.9f),
-					1000.0f);
-				break;
-		}
-	}
-
-	inline float intersect(const Ray& ray) const
-	{
-        static const double EPS_S = 0.0f;
-		Vector3f op = position - ray.orig;
-		double b = dot(op, ray.dir);
-		double det = b * b - op.length2() + radius * radius;
-		if (det < 0)
-			return 1e20f;
-		else
-			det = std::sqrt(det);
-
-        double t = b - det;
-        if (t > EPS_S) {
-            return static_cast<float>(t);
-        }
-        else {
-            t = b + det;
-            if (t > EPS_S)
-                return static_cast<float>(t);
-            else
-                return 1e20f;
-        }
-	}
-};
 
 using GeometryList = std::vector<Sphere>;
 GeometryList geometry = {
@@ -312,7 +163,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	auto finalColor = Spectrum(0.0f);
 	auto finalColorSecondary = Spectrum(0.0f);
     RayHitInfo isect;
-    static const int maxIter = 25000;
+    static const int maxIter = 4;
     static const float invMaxIter = 1.0f / maxIter;
 	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color = Spectrum(0.0f);
@@ -536,9 +387,9 @@ int main(int /*argc*/, const char* /*argv*/[])
     waitForCompletion();
     workQueueShutdown();
 	auto elapsed = timer.elapsed();
-	auto seconds = elapsed.count() / 1e9;
+	auto seconds = elapsed.count() / 1000000000;
 
-	printf("Time spent rendering: %f\n", seconds);
+	printf("Time spent rendering: %lld\n", seconds);
 
 	framebuffer.write("image.bmp");
 	framebufferSecondary.write("image-secondary.bmp");

@@ -27,8 +27,12 @@ set(INCLUDES
 	${INCL}/constants.h
 	${INCL}/frame.h
 	${INCL}/light.h
+	${INCL}/range.h
 	${INCL}/rng.h
+	${INCL}/scene.h
 	${INCL}/scheduler.h
+	${INCL}/semaphore.h
+	${INCL}/sphere.h
 	${INCL}/timer.h
 	${INCL}/triangle.h
 	${INCL}/vector.h)
@@ -36,6 +40,7 @@ set(INCLUDES
 set(SRCS
 	${SRC_DIR}/rt.cpp
 	${SRC_DIR}/bitmap.cpp
+	${SRC_DIR}/scene.cpp
 	${SRC_DIR}/scheduler.cpp)
 
 include_directories(${INCL})

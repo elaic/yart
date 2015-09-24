@@ -1,6 +1,7 @@
 #if !defined(VECTOR_H)
 #define VECTOR_H
 
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <type_traits>
