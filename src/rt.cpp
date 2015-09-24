@@ -1,13 +1,11 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <condition_variable>
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
-#include <mutex>
 #include <thread>
 #include <type_traits>
 #include <vector>
@@ -65,7 +63,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	auto finalColor = Spectrum(0.0f);
 	auto finalColorSecondary = Spectrum(0.0f);
     RayHitInfo isect;
-    static const int maxIter = 4;
+    static const int maxIter = 256;
     static const float invMaxIter = 1.0f / maxIter;
 	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color = Spectrum(0.0f);

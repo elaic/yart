@@ -1,6 +1,7 @@
 #if !defined(SEMAPHORE_H)
 #define SEMAPHORE_H
 
+#include <condition_variable>
 #include <cstdint>
 #include <mutex>
 
