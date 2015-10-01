@@ -18,7 +18,7 @@ public:
 
 	inline Duration elapsed()
 	{
-		return std::chrono::duration_cast<Seconds>(Clock::now() - start_);
+		return (Clock::now() - start_);
 	}
 
 private:

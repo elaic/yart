@@ -63,7 +63,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	auto finalColor = Spectrum(0.0f);
 	auto finalColorSecondary = Spectrum(0.0f);
     RayHitInfo isect;
-    static const int maxIter = 16;
+    static const int maxIter = 256;
     static const float invMaxIter = 1.0f / maxIter;
 	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color = Spectrum(0.0f);
@@ -289,9 +289,17 @@ int main(int /*argc*/, const char* /*argv*/[])
     waitForCompletion();
     workQueueShutdown();
 	auto elapsed = timer.elapsed();
-	auto seconds = elapsed.count() / 1000000000;
 
-	printf("Time spent rendering: %lld\n", seconds);
+	auto nanosec = elapsed.count();
+	auto minutes = nanosec / 60000000000;
+
+	nanosec = nanosec - minutes * 60000000000;
+	auto seconds = nanosec / 1000000000;
+
+	nanosec = nanosec - seconds * 1000000000;
+	auto milisec = nanosec / 1000000;
+
+	printf("Time spent rendering: %lldm %llds %lldms\n", minutes, seconds, milisec);
 
 	framebuffer.write("image.bmp");
 	framebufferSecondary.write("image-secondary.bmp");
