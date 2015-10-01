@@ -63,7 +63,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	auto finalColor = Spectrum(0.0f);
 	auto finalColorSecondary = Spectrum(0.0f);
     RayHitInfo isect;
-    static const int maxIter = 256;
+    static const int maxIter = 8;
     static const float invMaxIter = 1.0f / maxIter;
 	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color = Spectrum(0.0f);
@@ -142,7 +142,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 
 				pathWeight = pointwise(pathWeight, refl) *
 					std::abs(dot(dir, nl)) * (1.0f / pdf);
-				currentRay = { intersection + dir * 1e-2f, dir };
+				currentRay = { intersection + dir * EPS, dir };
 			}
 		}
 		finalColor = finalColor + (color * invMaxIter);

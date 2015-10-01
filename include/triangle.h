@@ -50,7 +50,7 @@ __forceinline bool intersect(const Ray& ray, const Triangle& triangle,
     const auto& pvec = cross(ray.dir, e2);
     const auto det = dot(e1, pvec);
 
-    if (det > -1e-4f && det < 1e-4f) // TODO: put it in a const
+    if (det > -EPS && det < EPS) // TODO: put it in a const
         return false;
 
     const auto invDet = 1.0f / det;

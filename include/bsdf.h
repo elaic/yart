@@ -7,10 +7,6 @@
 #include "constants.h"
 #include "vector.h"
 
-namespace {
-	static const float COS_EPS = 1e-4f;
-}
-
 template <typename T>
 T clamp(T val, T min, T max)
 {
@@ -250,7 +246,7 @@ public:
 		*wi = cosHemisphereSample(u1, u2);
 		if (wo.z < 0.0f) wi->z *= -1.0f;
 		*pdf = sameHemisphere(wo, *wi) ? absCosTheta(*wi) * INV_PI : 0.0f;
-		if (absCosTheta(*wi) < COS_EPS)
+		if (absCosTheta(*wi) < EPS)
 			return Spectrum(0.0f, 0.0f, 0.0f);
 		return f(wo, *wi);
 	}
@@ -280,7 +276,7 @@ public:
 		wi->y = -wo.y;
 		wi->z = wo.z;
 		*pdf = 1.0f;
-		if (absCosTheta(*wi) < COS_EPS)
+		if (absCosTheta(*wi) < EPS)
 			return Spectrum(0.0f, 0.0f, 0.0f);
 		return reflectance_ / absCosTheta(*wi);
 	}
@@ -323,7 +319,7 @@ public:
 		float sintOverSini = eta;
 		*wi = Vector3f(sintOverSini * -wo.x, sintOverSini * -wo.y, cost);
 		*pdf = 1.0f;
-		if (absCosTheta(*wi) < COS_EPS)
+		if (absCosTheta(*wi) < EPS)
 			return Spectrum(0.0f, 0.0f, 0.0f);
 		return reflectance_ / absCosTheta(*wi);
 	}
@@ -358,7 +354,7 @@ public:
 		wi->y = -wo.y;
 		wi->z = wo.z;
 		*pdf = 1.0f;
-		if (absCosTheta(*wi) < COS_EPS)
+		if (absCosTheta(*wi) < EPS)
 			return Spectrum(0.0f);
 		return pointwise(
 				fresnelConductor(absCosTheta(wo), eta_, k_),
@@ -397,7 +393,7 @@ public:
 		// total internal reflection, reflect ray
 		if (sint2 > 1.0f) {
 			*wi = Vector3f(-wo.x, -wo.y, wo.z);
-			if (absCosTheta(*wi) < COS_EPS)
+			if (absCosTheta(*wi) < EPS)
 				return Spectrum(0.0f);
 			return reflectance_ / absCosTheta(*wi);
 		}
@@ -417,7 +413,7 @@ public:
 			// reflection
 			*wi = Vector3f(-wo.x, -wo.y, wo.z);
 			*pdf = reflectionProbability;
-			if (absCosTheta(*wi) < COS_EPS)
+			if (absCosTheta(*wi) < EPS)
 				return Spectrum(0.0f);
 			return pointwise(fresnel, reflectance_) / absCosTheta(*wi);
 		} else {
@@ -428,7 +424,7 @@ public:
 			float sintOverSini = eta;
 			*wi = Vector3f(sintOverSini * -wo.x, sintOverSini * -wo.y, cost);
 			*pdf = 1.0f - reflectionProbability;
-			if (absCosTheta(*wi) < COS_EPS)
+			if (absCosTheta(*wi) < EPS)
 				return Spectrum(0.0f);
 			return pointwise(Spectrum(1.0f) - fresnel, reflectance_) / absCosTheta(*wi);
 		}
