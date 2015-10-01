@@ -6,6 +6,7 @@
 #include "vector.h"
 
 #include "sphere.h"
+#include "triaccel.h"
 #include "triangle.h"
 
 class Scene {
@@ -15,10 +16,51 @@ public:
 		const std::vector<Sphere> spheres)
 		: meshes_(meshes)
 		, spheres_(spheres)
+		, triaccel_(nullptr)
+		, triangleCount_(0)
 	{ }
+
+	~Scene()
+	{
+		_aligned_free(triaccel_);
+	}
+
+	void preprocess()
+	{
+		triangleCount_ = 0;
+		for (const auto& mesh : meshes_) {
+			triangleCount_ += mesh.triangleCount();
+		}
+
+		// No need to actually free and alloc always, just do it when there is
+		// more space required
+		_aligned_free(triaccel_);
+
+		triaccel_ = (TriAccel*)_aligned_malloc(
+			triangleCount_ * sizeof(TriAccel), 16
+		);
+
+		auto triaccelIdx = 0;
+		for (int meshIdx = 0; meshIdx < meshes_.size(); ++meshIdx) {
+			const auto& mesh = meshes_[meshIdx];
+			const auto& triangles = mesh.getTriangles();
+			for (int triIdx = 0; triIdx < triangles.size(); ++triIdx) {
+				const auto& tri = triangles[triIdx];
+				project(
+					(triaccel_ + triaccelIdx),
+					tri,
+					mesh.getVertices(),
+					triIdx,
+					meshIdx
+				);
+				++triaccelIdx;
+			}
+		}
+	}
 
 	bool intersect(const Ray& ray, RayHitInfo* const isect) const
 	{
+		using ::intersect;
 		static const float inf = 1e20f;
 		float d;
 		isect->t = inf;
@@ -37,11 +79,18 @@ public:
 			isect->bsdf = spheres_[id].bsdf.get();
 		}
 
-		RayHitInfo hitInfo;
-		for (const auto& mesh : meshes_) {
-			if (mesh.intersect(ray, &hitInfo) && hitInfo.t < isect->t) {
-				*isect = hitInfo;
+		auto triIdx = -1;
+		for (int32_t i = 0; i < triangleCount_; ++i) {
+			if (intersect(triaccel_[i], ray, isect)) {
+				triIdx = i;
 			}
+		}
+
+		if (triIdx > -1) {
+			auto meshIdx = triaccel_[triIdx].meshIdx;
+			auto triangleIdx = triaccel_[triIdx].triIdx;
+			isect->normal = meshes_[meshIdx].getNormal(triangleIdx);
+			isect->bsdf = meshes_[meshIdx].getBsdf();
 		}
 
 		return isect->t < inf;
@@ -49,9 +98,9 @@ public:
 
 	bool intersectShadow(const Ray& ray, float maxT) const
 	{
+		using ::intersect;
+
 		float d;
-		// not sure if this is safe, but probably better than uninitialized
-		int id = -1;
 		for (auto i = 0; i < spheres_.size(); ++i) {
 			d = spheres_[i].intersect(ray);
 			if (d < maxT) {
@@ -60,8 +109,10 @@ public:
 		}
 
 		RayHitInfo hitInfo;
-		for (const auto& mesh : meshes_) {
-			if (mesh.intersect(ray, &hitInfo) && hitInfo.t < maxT) {
+		auto triIdx = -1;
+		hitInfo.t = maxT;
+		for (int32_t i = 0; i < triangleCount_; ++i) {
+			if (intersect(triaccel_[i], ray, &hitInfo)) {
 				return true;
 			}
 		}
@@ -74,6 +125,9 @@ public:
 private:
 	std::vector<TriangleMesh> meshes_;
 	std::vector<Sphere> spheres_;
+
+	TriAccel* triaccel_;
+	int32_t triangleCount_;
 };
 
 #endif // SCENE_H

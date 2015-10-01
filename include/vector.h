@@ -164,6 +164,12 @@ struct TVector3 {
 	{
 		return TVector3(-x, -y, -z);
 	}
+
+	inline T operator[](int idx) const
+	{
+		assert(idx >= 0 && idx <= 2);
+		return (&x)[idx];
+	}
 };
 
 template <typename T>

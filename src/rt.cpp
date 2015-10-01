@@ -63,7 +63,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	auto finalColor = Spectrum(0.0f);
 	auto finalColorSecondary = Spectrum(0.0f);
     RayHitInfo isect;
-    static const int maxIter = 256;
+    static const int maxIter = 16;
     static const float invMaxIter = 1.0f / maxIter;
 	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color = Spectrum(0.0f);
@@ -265,6 +265,8 @@ int main(int /*argc*/, const char* /*argv*/[])
     numFullTiles.y = height / tileSize;
 
     workQueueInit();
+
+	scene.preprocess();
 
     std::vector<Tile> tiles;
     tiles.reserve(8);

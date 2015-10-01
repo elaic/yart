@@ -34,6 +34,7 @@ set(INCLUDES
 	${INCL}/semaphore.h
 	${INCL}/sphere.h
 	${INCL}/timer.h
+	${INCL}/triaccel.h
 	${INCL}/triangle.h
 	${INCL}/vector.h)
 

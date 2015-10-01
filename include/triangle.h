@@ -37,7 +37,7 @@ struct Triangle {
 // Moller-Trumbore ray triangle intersection
 // Winding order is counter clock wise (ccw)
 // TODO: test for performance against raw array of points
-inline bool intersect(const Ray& ray, const Triangle& triangle,
+__forceinline bool intersect(const Ray& ray, const Triangle& triangle,
     const std::vector<Vector3f>& points, RayHitInfo* const hitInfo)
 {
     const auto& v0 = points[triangle.idx0];
@@ -72,10 +72,10 @@ inline bool intersect(const Ray& ray, const Triangle& triangle,
 
 class TriangleMesh {
 public:
-    TriangleMesh(const std::vector<Vector3f>& points,
+    TriangleMesh(const std::vector<Vector3f>& vertices,
         const std::vector<Triangle>& triangles,
         const std::shared_ptr<Bsdf> bsdf)
-        : points_(points)
+        : vertices_(vertices)
         , triangles_(triangles)
         , bsdf_(bsdf)
     { }
@@ -86,7 +86,7 @@ public:
         auto currentT = std::numeric_limits<float>::max();
         auto hitId = -1;
         for (auto i = 0; i < triangles_.size(); ++i) {
-            if (::intersect(ray, triangles_[i], points_, &localHitInfo) &&
+            if (::intersect(ray, triangles_[i], vertices_, &localHitInfo) &&
                 localHitInfo.t < currentT && localHitInfo.t > 0.0f) {
                 *hitInfo = localHitInfo;
                 currentT = localHitInfo.t;
@@ -96,22 +96,42 @@ public:
 
         // Calculate geometric normal if a triangle was hit
         if (hitId >= 0) {
-            const auto& t = triangles_[hitId];
-            const auto& e1 = points_[t.idx1] - points_[t.idx0];
-            const auto& e2 = points_[t.idx2] - points_[t.idx0];
-            hitInfo->normal = normal(cross(e1, e2));
+            hitInfo->normal = getNormal(hitId);
             hitInfo->bsdf = bsdf_.get();
         }
         return currentT < std::numeric_limits<float>::max() && currentT > 0.0f;
     }
 
-    inline Bsdf* getBsdf()
+	inline Vector3f getNormal(int32_t triangleIdx) const
+	{
+		const auto& t = triangles_[triangleIdx];
+		const auto& e1 = vertices_[t.idx1] - vertices_[t.idx0];
+		const auto& e2 = vertices_[t.idx2] - vertices_[t.idx0];
+		return normal(cross(e1, e2));
+	}
+
+	inline int32_t triangleCount() const
+	{
+		return triangles_.size();
+	}
+
+    inline Bsdf* getBsdf() const
     {
         return bsdf_.get();
     }
 
+	const std::vector<Triangle>& getTriangles() const
+	{
+		return triangles_;
+	}
+
+	const std::vector<Vector3f> getVertices() const
+	{
+		return vertices_;
+	}
+
 private:
-    std::vector<Vector3f> points_;
+    std::vector<Vector3f> vertices_;
     std::vector<Triangle> triangles_;
     std::shared_ptr<Bsdf> bsdf_;
 };
