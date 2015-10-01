@@ -61,9 +61,9 @@ public:
 	bool intersect(const Ray& ray, RayHitInfo* const isect) const
 	{
 		using ::intersect;
-		static const float inf = 1e20f;
 		float d;
-		isect->t = inf;
+		isect->t = ray.maxT;
+		isect->t = std::numeric_limits<float>::infinity();
 		// not sure if this is safe, but probably better than uninitialized
 		int id = -1;
 		for (auto i = 0; i < spheres_.size(); ++i) {
@@ -73,7 +73,8 @@ public:
 				id = i;
 			}
 		}
-		if (isect->t < inf) {
+
+		if (isect->t < ray.maxT) {
 			isect->normal = normal((ray.orig + isect->t * ray.dir) -
 				spheres_[id].position);
 			isect->bsdf = spheres_[id].bsdf.get();
@@ -93,24 +94,24 @@ public:
 			isect->bsdf = meshes_[meshIdx].getBsdf();
 		}
 
-		return isect->t < inf;
+		return isect->t < ray.maxT;
 	}
 
-	bool intersectShadow(const Ray& ray, float maxT) const
+	bool intersectShadow(const Ray& ray) const
 	{
 		using ::intersect;
 
 		float d;
 		for (auto i = 0; i < spheres_.size(); ++i) {
 			d = spheres_[i].intersect(ray);
-			if (d < maxT) {
+			if (d < ray.maxT) {
 				return true;
 			}
 		}
 
 		RayHitInfo hitInfo;
 		auto triIdx = -1;
-		hitInfo.t = maxT;
+		hitInfo.t = ray.maxT;
 		for (int32_t i = 0; i < triangleCount_; ++i) {
 			if (intersect(triaccel_[i], ray, &hitInfo)) {
 				return true;

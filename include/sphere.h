@@ -62,7 +62,7 @@ struct Sphere {
 		double b = dot(op, ray.dir);
 		double det = b * b - op.length2() + radius * radius;
 		if (det < 0)
-			return 1e20f;
+			return std::numeric_limits<float>::infinity();
 		else
 			det = std::sqrt(det);
 
@@ -75,7 +75,7 @@ struct Sphere {
 			if (t > EPS_S)
 				return static_cast<float>(t);
 			else
-				return 1e20f;
+				return std::numeric_limits<float>::infinity();
 		}
 	}
 };

@@ -99,8 +99,8 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 				float pdf;
 				Spectrum lightEmission = light.sample(intersection, &wi, &pdf);
 				auto lightRay = Ray(intersection + wi * EPS, wi);
-				float maxT = length(intersection - light.position());
-				if (!scene.intersectShadow(lightRay, maxT)) {
+				lightRay.maxT = length(intersection - light.position());
+				if (!scene.intersectShadow(lightRay)) {
 					if (light.isDelta()) {
 						Spectrum f = isect.bsdf->f(wo, wi);
 						color = color + (pointwise(pathWeight,

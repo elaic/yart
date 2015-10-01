@@ -232,9 +232,16 @@ using Spectrum = TVector3<float>;
 // Temporarily add Ray
 struct Ray {
     Vector3f orig;
+	float minT;
     Vector3f dir;
+	float maxT;
 
-    Ray(Vector3f o, Vector3f d) : orig(o), dir(d) { }
+    Ray(Vector3f o, Vector3f d)
+		: orig(o)
+		, dir(d)
+		, minT(0.0f)
+		, maxT(std::numeric_limits<float>::infinity())
+	{ }
 };
 
 #endif // VECTOR_H
