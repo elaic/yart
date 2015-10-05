@@ -227,8 +227,6 @@ inline TVector3<T> sphericalDirection(T sinTheta, T cosTheta, T phi)
 using Vector3f = TVector3<float>;
 using Vector3i = TVector3<int32_t>;
 
-using Spectrum = TVector3<float>;
-
 // Temporarily add Ray
 struct Ray {
     Vector3f orig;

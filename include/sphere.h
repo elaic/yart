@@ -19,7 +19,7 @@ struct Sphere {
 	Vector3f position;
 	std::shared_ptr<Bsdf> bsdf;
 
-	Sphere(float radius, Vector3f position, Vector3f color, Bxdf bxdf)
+	Sphere(float radius, Vector3f position, Spectrum color, Bxdf bxdf)
 		: radius(radius)
 		, position(position)
 	{

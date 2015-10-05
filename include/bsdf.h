@@ -5,6 +5,7 @@
 #include <cstdio>
 
 #include "constants.h"
+#include "spectrum.h"
 #include "vector.h"
 
 template <typename T>
@@ -136,8 +137,7 @@ inline Spectrum fresnelDielectric(float cosi, float cost, const Spectrum& etai,
 	Spectrum Rperpendicular =
 		((etai * cosi) - (etat * cost)) /
 		((etai * cosi) + (etat * cost));
-	return (pointwise(Rparallel, Rparallel) +
-		pointwise(Rperpendicular, Rperpendicular)) / 2.0f;
+	return (Rparallel * Rparallel + Rperpendicular * Rperpendicular) / 2.0f;
 }
 
 template <int n>
@@ -168,10 +168,10 @@ inline float fresnelDielectricSchlick(float cosi, float etai, float etat)
 inline Spectrum fresnelConductor(float cosi, const Spectrum& eta,
 	const Spectrum& k)
 {
-	Spectrum tmp = (pointwise(eta, eta) + pointwise(k, k)) * cosi * cosi;
+	Spectrum tmp = ((eta * eta) + (k * k)) * cosi * cosi;
 	Spectrum Rparl2 = (tmp - (2.0f * eta * cosi) + 1.0f) /
 		(tmp + (2.0f * eta * cosi) + 1.0f);
-	Spectrum tmp2 = pointwise(eta, eta) + pointwise(k, k);
+	Spectrum tmp2 = (eta * eta) + (k * k);
 	Spectrum Rperp2 = (tmp2 - (2.0f * eta * cosi) + cosi * cosi) /
 		(tmp2 + (2.0f * eta * cosi) + cosi * cosi);
 	return (Rparl2 + Rperp2) / 2.0f;
@@ -356,9 +356,8 @@ public:
 		*pdf = 1.0f;
 		if (absCosTheta(*wi) < EPS)
 			return Spectrum(0.0f);
-		return pointwise(
-				fresnelConductor(absCosTheta(wo), eta_, k_),
-				reflectance_) / absCosTheta(*wi);
+		return fresnelConductor(absCosTheta(wo), eta_, k_) * reflectance_
+			/ absCosTheta(*wi);
 	}
 
 private:
@@ -407,7 +406,7 @@ public:
 		Spectrum fresnel = fresnelDielectric(absCosTheta(wo), cost,
 			Spectrum(etai), Spectrum(etat));
 
-		float reflectionProbability = (fresnel.x + fresnel.y + fresnel.z) / 3.0f;
+		float reflectionProbability = fresnel.y();
 
 		if (u1 < reflectionProbability) {
 			// reflection
@@ -415,7 +414,7 @@ public:
 			*pdf = reflectionProbability;
 			if (absCosTheta(*wi) < EPS)
 				return Spectrum(0.0f);
-			return pointwise(fresnel, reflectance_) / absCosTheta(*wi);
+			return fresnel * reflectance_ / absCosTheta(*wi);
 		} else {
 			// refraction
 			cost = std::sqrt(std::max(0.0f, 1.0f - sint2));
@@ -426,7 +425,7 @@ public:
 			*pdf = 1.0f - reflectionProbability;
 			if (absCosTheta(*wi) < EPS)
 				return Spectrum(0.0f);
-			return pointwise(Spectrum(1.0f) - fresnel, reflectance_) / absCosTheta(*wi);
+			return (Spectrum(1.0f) - fresnel) * reflectance_ / absCosTheta(*wi);
 		}
 	}
 
@@ -459,7 +458,7 @@ public:
 		Vector3f wh = normal(wo + wi);
 		float cosThetaH = dot(wi, wh);
 		Spectrum f = fresnelConductor(cosThetaH, eta_, k_);
-		return pointwise(reflectance_, f) * distribution_->d(wh) * G(wo, wi, wh) /
+		return (reflectance_ * f) * distribution_->d(wh) * G(wo, wi, wh) /
 			(4.0f * cosThetaI * cosThetaO);
 	}
 

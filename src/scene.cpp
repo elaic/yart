@@ -6,9 +6,9 @@ Scene Scene::makeCornellBox()
 	using SphereList = std::vector<Sphere>;
 	SphereList spheres = {
 		Sphere(16.5f, Vector3f(27.0f, 16.5f, 47.0f),
-			Vector3f(0.999f, 0.999f, 0.999f), Bxdf::FresSpec),
+			Spectrum(0.999f, 0.999f, 0.999f), Bxdf::FresSpec),
 		Sphere(16.5f, Vector3f(73.0f, 16.5f, 88.0f),
-			Vector3f(0.999f, 0.999f, 0.999f), Bxdf::FresTran),
+			Spectrum(0.999f, 0.999f, 0.999f), Bxdf::FresTran),
 		//Sphere(8.5f, Vector3f(50.0f, 8.5f, 60.0f),
 		//	Vector3f(0.999f, 0.999f, 0.999f), Bxdf::TorranceSparrow),
 	};
@@ -132,7 +132,7 @@ Scene Scene::makeCornellBox()
 			Triangle(0, 2, 6),
 		},
 		//std::make_shared<Lambertian>(Spectrum(0.1f, 0.3f, 0.7f))
-		std::make_shared<FresnelConductor>(Vector3f(0.999f, 0.999f, 0.999f),
+		std::make_shared<FresnelConductor>(Spectrum(0.999f, 0.999f, 0.999f),
 			Spectrum(0.16f, 0.55f, 1.75f), Spectrum(4.6f, 2.2f, 1.9f))
 		),
 	};

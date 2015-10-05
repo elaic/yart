@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "vector.h"
+#include "spectrum.h"
 
 struct BitmapMagic {
 	uint8_t 	magic[2];
@@ -41,7 +41,7 @@ public:
 		buffer_.resize(width_ * height_);
 	}
 
-	void set(int32_t x, int32_t y, const Vector3f& color)
+	void set(int32_t x, int32_t y, const RGBColor& color)
 	{
 		buffer_[y * width_ + x] = color;
 	}
@@ -52,7 +52,7 @@ private:
 	int32_t width_;
 	int32_t height_;
 
-	std::vector<Vector3f> buffer_;
+	std::vector<RGBColor> buffer_;
 };
 
 #endif // BITMAP_H

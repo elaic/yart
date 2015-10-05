@@ -32,6 +32,7 @@ set(INCLUDES
 	${INCL}/scene.h
 	${INCL}/scheduler.h
 	${INCL}/semaphore.h
+	${INCL}/spectrum.h
 	${INCL}/sphere.h
 	${INCL}/timer.h
 	${INCL}/triaccel.h

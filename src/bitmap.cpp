@@ -53,10 +53,10 @@ bool Bitmap::write(const std::string& name)
 
 	for (int32_t i = height_ - 1; i >= 0; --i) {
 		for (int32_t j = 0; j < width_; ++j) {
-			const Vector3f& bufVal = buffer_[i * width_ + j];
-			color[0] = toneMap(bufVal.z);
-			color[1] = toneMap(bufVal.y);
-			color[2] = toneMap(bufVal.x);
+			const RGBColor& bufVal = buffer_[i * width_ + j];
+			color[0] = toneMap(bufVal.b);
+			color[1] = toneMap(bufVal.g);
+			color[2] = toneMap(bufVal.r);
 
 			out.write(reinterpret_cast<char*>(color), sizeof(color));
 		}

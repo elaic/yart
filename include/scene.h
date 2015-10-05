@@ -110,7 +110,6 @@ public:
 		}
 
 		RayHitInfo hitInfo;
-		auto triIdx = -1;
 		hitInfo.t = ray.maxT;
 		for (int32_t i = 0; i < triangleCount_; ++i) {
 			if (intersect(triaccel_[i], ray, &hitInfo)) {

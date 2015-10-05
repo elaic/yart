@@ -21,6 +21,7 @@
 
 #include "light.h"
 #include "scene.h"
+#include "spectrum.h"
 #include "sphere.h"
 #include "triangle.h"
 
@@ -28,7 +29,7 @@ auto scene = Scene::makeCornellBox();
 
 auto light = PointLight(
 	Vector3f(50.0f, 60.0f, 85.0f),
-	Vector3f(5000.0f, 5000.0f, 5000.0f)
+	Spectrum(5000.0f, 5000.0f, 5000.0f)
 );
 
 int32_t width = 1024;
@@ -63,12 +64,12 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	auto finalColor = Spectrum(0.0f);
 	auto finalColorSecondary = Spectrum(0.0f);
     RayHitInfo isect;
-    static const int maxIter = 8;
+    static const int maxIter = 32;
     static const float invMaxIter = 1.0f / maxIter;
 	for (int k = 0; k < maxIter; ++k) {
-		Spectrum color = Spectrum(0.0f);
-		Spectrum secondaryColor = Spectrum(0.0f);
-		Vector3f pathWeight = Vector3f(1.0f);
+		Spectrum color { 0.0f };
+		Spectrum secondaryColor { 0.0f };
+		Spectrum pathWeight { 1.0f };
 
         auto currentRay = camera.sample(
             x + rng.randomFloat() - 0.5f,
@@ -103,12 +104,11 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 				if (!scene.intersectShadow(lightRay)) {
 					if (light.isDelta()) {
 						Spectrum f = isect.bsdf->f(wo, wi);
-						color = color + (pointwise(pathWeight,
-							pointwise(f, lightEmission))
+						color = color + ((pathWeight * (f * lightEmission))
 							* (std::abs(dot(nl, wi)) / pdf));
 						if (i > 0) {
-							secondaryColor = secondaryColor + (pointwise(pathWeight,
-								pointwise(f, lightEmission))
+							secondaryColor = 
+								secondaryColor + (pathWeight * f * lightEmission
 								* (std::abs(dot(nl, wi)) / pdf));
 						}
 					} else {
@@ -125,7 +125,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 				// TODO: this should probably be something different than just
 				// average, since some portions of spectrum are more important
 				// to human eye that others
-				float continueProbability = (pathWeight.x + pathWeight.y + pathWeight.z) / 3;
+				float continueProbability = pathWeight.y();
 				if (rng.randomFloat() > continueProbability)
 					break;
 
@@ -135,13 +135,13 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 				Spectrum refl = isect.bsdf->sample(wo, &wi, rng.randomFloat(),
 					rng.randomFloat(), &pdf);
 
-				if ((refl.x + refl.y + refl.z) / 3.0f == 0.0f)
+				if (refl.y() == 0.0f)
 					break;
 
 				Vector3f dir = hitFrame.toWorld(wi);
 
-				pathWeight = pointwise(pathWeight, refl) *
-					std::abs(dot(dir, nl)) * (1.0f / pdf);
+				pathWeight = pathWeight * refl 
+					* std::abs(dot(dir, nl)) * (1.0f / pdf);
 				currentRay = { intersection + dir * EPS, dir };
 			}
 		}
@@ -149,8 +149,8 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 		finalColorSecondary = finalColorSecondary + (secondaryColor * invMaxIter);
 	}
 
-    framebuffer.set(x, y, finalColor);
-	framebufferSecondary.set(x, y, finalColorSecondary);
+    framebuffer.set(x, y, finalColor.toRGB());
+	framebufferSecondary.set(x, y, finalColorSecondary.toRGB());
 }
 
 void processTile(Tile tile)
@@ -201,7 +201,7 @@ void runTiles()
 
 void tileTask()
 {
-    while (true) {
+    for (;;) {
         taskSemahore.wait();
 
         Tile currentTile;

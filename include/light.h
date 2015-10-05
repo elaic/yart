@@ -2,6 +2,7 @@
 #define LIGHT_H
 
 #include "constants.h"
+#include "spectrum.h"
 #include "vector.h"
 
 class PointLight {

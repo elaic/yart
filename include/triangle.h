@@ -112,7 +112,7 @@ public:
 
 	inline int32_t triangleCount() const
 	{
-		return triangles_.size();
+		return static_cast<int32_t>(triangles_.size());
 	}
 
     inline Bsdf* getBsdf() const
