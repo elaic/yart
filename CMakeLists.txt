@@ -4,12 +4,12 @@ project(rt)
 if (UNIX)
 	# -fno-rtti - disables rtti
 	# -Werror - add when spectrum class is implemented
-	set(CMAKE_CXX_FLAGS "-Wall -Wpedantic -stdlib=libc++ -std=c++1z -O3 -g ${CMAKE_CXX_FLAGS}")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -Werror -Wall -Wpedantic -stdlib=libc++ -std=c++1z -O3 -g")
 elseif (MSVC)
 	# /GR- - disables rtti
 	# /sdl - additional checks, add when spectrum class is implemented
 	# /Wx - treat warnings as errors, same as above
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /W4 /sdl /WX")
 else()
 	message(FATAL_ERROR "Unsupported system")
 endif()
