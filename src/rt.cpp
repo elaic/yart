@@ -36,11 +36,11 @@ int32_t width = 1024;
 int32_t height = 768;
 
 auto camera = Camera(
-    Vector3f(50.0f, 48.0f, 295.6f),
+    Vector3f(50.0f, 48.0f, 220.0f),
     normal(Vector3f(0.0f, -0.042612f, -1.0f)),
     width,
     height,
-    0.5135f
+	0.785398f
 );
 
 auto framebuffer = Bitmap(width, height);
@@ -54,11 +54,18 @@ struct Tile {
     Tile(Vector2i start, Vector2i end) : start(start), end(end) { }
 };
 
+//class Renderer {
+//public:
+//	void render(const Scene& scene, const Camera& camera) const
+//	{
+//	}
+//
+//private:
+//};
+
 void trace(int pixelIdx, int32_t x, int32_t y)
 {
 	using std::abs;
-	using std::cos;
-	using std::sin;
 
 	Rng rng(pixelIdx);
 	auto finalColor = Spectrum(0.0f);
@@ -95,56 +102,48 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 			/*
 			 * sample lights
 			 */
-			{
-				Vector3f wi;
-				float pdf;
-				Spectrum lightEmission = light.sample(intersection, &wi, &pdf);
-				auto lightRay = Ray(intersection + wi * EPS, wi);
-				lightRay.maxT = length(intersection - light.position());
-				if (!scene.intersectShadow(lightRay)) {
-					if (light.isDelta()) {
-						Spectrum f = isect.bsdf->f(wo, wi);
-						color = color + ((pathWeight * (f * lightEmission))
-							* (std::abs(dot(nl, wi)) / pdf));
-						if (i > 0) {
-							secondaryColor = 
-								secondaryColor + (pathWeight * f * lightEmission
-								* (std::abs(dot(nl, wi)) / pdf));
-						}
-					} else {
-						assert(false);
-						color = Spectrum(0.0f);
+			Vector3f wi;
+			float pdf;
+			Spectrum lightEmission = light.sample(intersection, &wi, &pdf);
+			auto lightRay = Ray(intersection + wi * EPS, wi);
+			lightRay.maxT = length(intersection - light.position());
+			if (!scene.intersectShadow(lightRay)) {
+				if (light.isDelta()) {
+					Spectrum f = isect.bsdf->f(wo, wi);
+					color = color + ((pathWeight * (f * lightEmission))
+						* (abs(dot(nl, wi)) / pdf));
+					if (i > 0) {
+						secondaryColor = 
+							secondaryColor + (pathWeight * f * lightEmission
+							* (abs(dot(nl, wi)) / pdf));
 					}
+				} else {
+					assert(false);
+					color = Spectrum(0.0f);
 				}
 			}
 
 			/*
              * continue tracing
              */
-			{
-				// TODO: this should probably be something different than just
-				// average, since some portions of spectrum are more important
-				// to human eye that others
-				float continueProbability = pathWeight.y();
-				if (rng.randomFloat() > continueProbability)
-					break;
+			float continueProbability = pathWeight.y();
+			if (rng.randomFloat() > continueProbability)
+				break;
 
-				pathWeight /= continueProbability;
-				Vector3f wi;
-				float pdf;
-				Spectrum refl = isect.bsdf->sample(wo, &wi, rng.randomFloat(),
-					rng.randomFloat(), &pdf);
+			pathWeight /= continueProbability;
+			Spectrum refl = isect.bsdf->sample(wo, &wi, rng.randomFloat(),
+				rng.randomFloat(), &pdf);
 
-				if (refl.y() == 0.0f)
-					break;
+			if (refl.y() == 0.0f)
+				break;
 
-				Vector3f dir = hitFrame.toWorld(wi);
+			Vector3f dir = hitFrame.toWorld(wi);
 
-				pathWeight = pathWeight * refl 
-					* std::abs(dot(dir, nl)) * (1.0f / pdf);
-				currentRay = { intersection + dir * EPS, dir };
-			}
+			pathWeight = pathWeight * refl 
+				* abs(dot(dir, nl)) * (1.0f / pdf);
+			currentRay = { intersection + dir * EPS, dir };
 		}
+
 		finalColor = finalColor + (color * invMaxIter);
 		finalColorSecondary = finalColorSecondary + (secondaryColor * invMaxIter);
 	}

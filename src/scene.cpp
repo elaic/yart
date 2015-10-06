@@ -9,8 +9,8 @@ Scene Scene::makeCornellBox()
 			Spectrum(0.999f, 0.999f, 0.999f), Bxdf::FresSpec),
 		Sphere(16.5f, Vector3f(73.0f, 16.5f, 88.0f),
 			Spectrum(0.999f, 0.999f, 0.999f), Bxdf::FresTran),
-		//Sphere(8.5f, Vector3f(50.0f, 8.5f, 60.0f),
-		//	Vector3f(0.999f, 0.999f, 0.999f), Bxdf::TorranceSparrow),
+		Sphere(8.5f, Vector3f(50.0f, 8.5f, 60.0f),
+			Spectrum(0.999f, 0.999f, 0.999f), Bxdf::TorranceSparrow),
 	};
 
 	using MeshList = std::vector<TriangleMesh>;
@@ -19,9 +19,9 @@ Scene Scene::makeCornellBox()
 		TriangleMesh(
 		{
 			Vector3f(0.0f, 0.0f, 0.0f),
-			Vector3f(0.0f, 0.0f, 160.0f),
+			Vector3f(0.0f, 0.0f, 230.0f),
 			Vector3f(0.0f, 80.0f, 0.0f),
-			Vector3f(0.0f, 80.0f, 160.0f),
+			Vector3f(0.0f, 80.0f, 230.0f),
 		},
 		{
 			Triangle(0, 1, 2),
@@ -34,9 +34,9 @@ Scene Scene::makeCornellBox()
 		TriangleMesh(
 		{
 			Vector3f(100.0f, 0.0f, 0.0f),
-			Vector3f(100.0f, 0.0f, 160.0f),
+			Vector3f(100.0f, 0.0f, 230.0f),
 			Vector3f(100.0f, 80.0f, 0.0f),
-			Vector3f(100.0f, 80.0f, 160.0f),
+			Vector3f(100.0f, 80.0f, 230.0f),
 		},
 		{
 			Triangle(0, 2, 1),
@@ -63,10 +63,10 @@ Scene Scene::makeCornellBox()
 		// Back wall
 		TriangleMesh(
 		{
-			Vector3f(0.0f, 0.0f, 160.0f),
-			Vector3f(100.0f, 0.0f, 160.0f),
-			Vector3f(0.0f, 80.0f, 160.0f),
-			Vector3f(100.0f, 80.0f, 160.0f),
+			Vector3f(0.0f, 0.0f, 230.0f),
+			Vector3f(100.0f, 0.0f, 230.0f),
+			Vector3f(0.0f, 80.0f, 230.0f),
+			Vector3f(100.0f, 80.0f, 230.0f),
 		},
 		{
 			Triangle(0, 2, 1),
@@ -78,8 +78,8 @@ Scene Scene::makeCornellBox()
 		// Floor wall
 		TriangleMesh(
 		{
-			Vector3f(0.0f, 0.0f, 160.0f),
-			Vector3f(100.0f, 0.0f, 160.0f),
+			Vector3f(0.0f, 0.0f, 230.0f),
+			Vector3f(100.0f, 0.0f, 230.0f),
 			Vector3f(0.0f, 0.0f, 0.0f),
 			Vector3f(100.0f, 0.0f, 0.0f),
 		},
@@ -93,8 +93,8 @@ Scene Scene::makeCornellBox()
 		// Ceiling wall
 		TriangleMesh(
 		{
-			Vector3f(0.0f, 80.0f, 160.0f),
-			Vector3f(100.0f, 80.0f, 160.0f),
+			Vector3f(0.0f, 80.0f, 230.0f),
+			Vector3f(100.0f, 80.0f, 230.0f),
 			Vector3f(0.0f, 80.0f, 0.0f),
 			Vector3f(100.0f, 80.0f, 0.0f),
 		},
@@ -127,7 +127,7 @@ Scene Scene::makeCornellBox()
 			Triangle(7, 6, 3), // right
 			Triangle(6, 2, 3),
 			Triangle(1, 5, 7), // top
-			Triangle(5, 7, 3),
+			Triangle(1, 7, 3),
 			Triangle(0, 6, 4), // bottom
 			Triangle(0, 2, 6),
 		},

@@ -132,11 +132,11 @@ inline Spectrum fresnelDielectric(float cosi, float cost, const Spectrum& etai,
 	const Spectrum& etat)
 {
 	Spectrum Rparallel =
-		((etat * cosi) - (etai * cost)) /
-		((etat * cosi) + (etai * cost));
+		(etat * cosi - etai * cost) /
+		(etat * cosi + etai * cost);
 	Spectrum Rperpendicular =
-		((etai * cosi) - (etat * cost)) /
-		((etai * cosi) + (etat * cost));
+		(etai * cosi - etat * cost) /
+		(etai * cosi + etat * cost);
 	return (Rparallel * Rparallel + Rperpendicular * Rperpendicular) / 2.0f;
 }
 
@@ -168,10 +168,10 @@ inline float fresnelDielectricSchlick(float cosi, float etai, float etat)
 inline Spectrum fresnelConductor(float cosi, const Spectrum& eta,
 	const Spectrum& k)
 {
-	Spectrum tmp = ((eta * eta) + (k * k)) * cosi * cosi;
+	Spectrum tmp = (eta * eta + k * k) * cosi * cosi;
 	Spectrum Rparl2 = (tmp - (2.0f * eta * cosi) + 1.0f) /
 		(tmp + (2.0f * eta * cosi) + 1.0f);
-	Spectrum tmp2 = (eta * eta) + (k * k);
+	Spectrum tmp2 = eta * eta + k * k;
 	Spectrum Rperp2 = (tmp2 - (2.0f * eta * cosi) + cosi * cosi) /
 		(tmp2 + (2.0f * eta * cosi) + cosi * cosi);
 	return (Rparl2 + Rperp2) / 2.0f;

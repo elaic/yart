@@ -25,7 +25,7 @@ public:
             right_ * ((x + 0.5f) / width_ - 0.5f) +
             up_ * (-(y + 0.5f) / height_ + 0.5f) + direction_;
 
-        return Ray(position_ + d * 140.0f, normal(d));
+        return Ray(position_, normal(d));
     }
 
 private:
