@@ -25,17 +25,17 @@
 #include "sphere.h"
 #include "triangle.h"
 
-auto scene = Scene::makeCornellBox();
+auto scene_ = Scene::makeCornellBox();
 
 auto light = PointLight(
 	Vector3f(50.0f, 60.0f, 85.0f),
 	Spectrum(5000.0f, 5000.0f, 5000.0f)
 );
 
-int32_t width = 1024;
-int32_t height = 768;
+int32_t width = 1031;
+int32_t height = 775;
 
-auto camera = Camera(
+auto camera_ = Camera(
     Vector3f(50.0f, 48.0f, 220.0f),
     normal(Vector3f(0.0f, -0.042612f, -1.0f)),
     width,
@@ -54,15 +54,6 @@ struct Tile {
     Tile(Vector2i start, Vector2i end) : start(start), end(end) { }
 };
 
-//class Renderer {
-//public:
-//	void render(const Scene& scene, const Camera& camera) const
-//	{
-//	}
-//
-//private:
-//};
-
 void trace(int pixelIdx, int32_t x, int32_t y)
 {
 	using std::abs;
@@ -78,13 +69,13 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 		Spectrum secondaryColor { 0.0f };
 		Spectrum pathWeight { 1.0f };
 
-        auto currentRay = camera.sample(
+        auto currentRay = camera_.sample(
             x + rng.randomFloat() - 0.5f,
             y + rng.randomFloat() - 0.5f
         );
 
 		for (int i = 0; i < 5; ++i) {
-			if (!scene.intersect(currentRay, &isect))
+			if (!scene_.intersect(currentRay, &isect))
 				break;
 
 			/*
@@ -107,7 +98,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 			Spectrum lightEmission = light.sample(intersection, &wi, &pdf);
 			auto lightRay = Ray(intersection + wi * EPS, wi);
 			lightRay.maxT = length(intersection - light.position());
-			if (!scene.intersectShadow(lightRay)) {
+			if (!scene_.intersectShadow(lightRay)) {
 				if (light.isDelta()) {
 					Spectrum f = isect.bsdf->f(wo, wi);
 					color = color + ((pathWeight * (f * lightEmission))
@@ -254,39 +245,78 @@ void workQueueShutdown()
     std::for_each(begin(workers), end(workers), [&](auto& t){ t.join(); });
 }
 
+class Renderer {
+public:
+	void render(const Scene& /*scene*/, const Camera& camera) const
+	{
+		Vector2i numFullTiles;
+		numFullTiles.x = camera.getWidth() / tileSize_;
+		numFullTiles.y = camera.getHeight() / tileSize_;
+
+		std::vector<Tile> tiles;
+		tiles.reserve(numFullTiles.x * numFullTiles.y);
+
+		Vector2i start;
+		Vector2i end;
+
+		for (auto i = 0; i < numFullTiles.x; ++i) {
+			for (auto j = 0; j < numFullTiles.y; ++j) {
+				start.x = i * tileSize_;
+				start.y = j * tileSize_;
+				end.x = (i + 1) * tileSize_;
+				end.y = (j + 1) * tileSize_;
+				tiles.push_back(Tile(start, end));
+			}
+		}
+
+		auto leftoverWidth = camera.getWidth() - numFullTiles.x * tileSize_;
+		if (leftoverWidth > 0) {
+			for (auto i = 0; i < numFullTiles.y; ++i) {
+				start.x = numFullTiles.x * tileSize_;
+				start.y = i * tileSize_;
+				end.x = camera.getWidth();
+				end.y = (i + 1) * tileSize_;
+				tiles.push_back(Tile(start, end));
+			}
+		}
+
+		auto leftoverHeight = camera.getHeight() - numFullTiles.y * tileSize_;
+		if (leftoverHeight > 0) {
+			for (auto i = 0; i < numFullTiles.x; ++i) {
+				start.x = i * tileSize_;
+				start.y = numFullTiles.y * tileSize_;
+				end.x = (i + 1) * tileSize_;
+				end.y = camera.getHeight();
+				tiles.push_back(Tile(start, end));
+			}
+		}
+
+		if (leftoverWidth > 0 && leftoverHeight > 0) {
+			tiles.push_back(Tile(
+				Vector2i(numFullTiles.x * tileSize_, numFullTiles.y * tileSize_),
+				Vector2i(camera.getWidth(), camera.getHeight())
+			));
+		}
+
+		enqueuTiles(tiles);
+		runTiles();
+		waitForCompletion();
+	}
+
+private:
+	static constexpr int32_t tileSize_ = 32;
+};
+
 int main(int /*argc*/, const char* /*argv*/[])
 {
-	using std::abs;
-    static const int32_t tileSize = 32;
-
-    Vector2i numFullTiles;
-    numFullTiles.x = width / tileSize;
-    numFullTiles.y = height / tileSize;
+	Renderer renderer;
 
     workQueueInit();
-
-	scene.preprocess();
-
-    std::vector<Tile> tiles;
-    tiles.reserve(8);
-    Vector2i start;
-    Vector2i end;
-    for (auto i = 0; i < numFullTiles.x; ++i) {
-        for (auto j = 0; j < numFullTiles.y; ++j) {
-            start.x = i * tileSize;
-            start.y = j * tileSize;
-            end.x = (i + 1) * tileSize;
-            end.y = (j + 1) * tileSize;
-            tiles.push_back(Tile(start, end));
-        }
-    }
+	scene_.preprocess();
 
 	Timer timer;
 	timer.start();
-    enqueuTiles(tiles);
-    runTiles();
-    waitForCompletion();
-    workQueueShutdown();
+	renderer.render(scene_, camera_);
 	auto elapsed = timer.elapsed();
 
 	auto nanosec = elapsed.count();
@@ -302,6 +332,8 @@ int main(int /*argc*/, const char* /*argv*/[])
 
 	framebuffer.write("image.bmp");
 	framebufferSecondary.write("image-secondary.bmp");
+
+	workQueueShutdown();
 
 	int a;
 	std::cin >> a;

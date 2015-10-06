@@ -28,6 +28,21 @@ public:
         return Ray(position_, normal(d));
     }
 
+	inline int32_t getWidth() const
+	{
+		return width_;
+	}
+
+	inline int32_t getHeight() const
+	{
+		return height_;
+	}
+
+	inline Vector2i getResolution() const
+	{
+		return Vector2i(width_, height_);
+	}
+
 private:
     Vector3f position_;
     Vector3f direction_;
