@@ -12,7 +12,7 @@ public:
 	, intensity_(intensity)
 	{ }
 
-	Spectrum sample(const Vector3f& scenePosition, Vector3f* wi, float* pdf)
+	Spectrum sample(const Vector3f& scenePosition, Vector3f* wi, float* pdf) const
 	{
 		Vector3f toLight = position_ - scenePosition;
 		*wi = normal(toLight);

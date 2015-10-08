@@ -1,4 +1,5 @@
 #include "scene.h"
+#include "light.h"
 
 Scene Scene::makeCornellBox()
 {
@@ -137,5 +138,13 @@ Scene Scene::makeCornellBox()
 		),
 	};
 
-	return Scene(meshes, spheres);
+	using LightList = std::vector<PointLight>;
+	LightList lights = {
+		PointLight(
+			Vector3f(50.0f, 60.0f, 85.0f),
+			Spectrum(5000.0f, 5000.0f, 5000.0f)
+		),
+	};
+
+	return Scene(meshes, spheres, lights);
 }

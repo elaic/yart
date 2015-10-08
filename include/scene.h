@@ -9,13 +9,17 @@
 #include "triaccel.h"
 #include "triangle.h"
 
+class PointLight;
+
 class Scene {
 public:
 	Scene(
-		const std::vector<TriangleMesh> meshes, 
-		const std::vector<Sphere> spheres)
+		const std::vector<TriangleMesh>& meshes, 
+		const std::vector<Sphere>& spheres,
+		const std::vector<PointLight>& lights)
 		: meshes_(meshes)
 		, spheres_(spheres)
+		, lights_(lights)
 		, triaccel_(nullptr)
 		, triangleCount_(0)
 	{ }
@@ -120,11 +124,17 @@ public:
 		return false;
 	}
 
+	const std::vector<PointLight>& getLights() const
+	{
+		return lights_;
+	}
+
 	static Scene makeCornellBox();
 
 private:
 	std::vector<TriangleMesh> meshes_;
 	std::vector<Sphere> spheres_;
+	std::vector<PointLight> lights_;
 
 	TriAccel* triaccel_;
 	int32_t triangleCount_;

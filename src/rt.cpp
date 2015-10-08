@@ -18,11 +18,6 @@
 #include "scene.h"
 #include "spectrum.h"
 
-auto light = PointLight(
-	Vector3f(50.0f, 60.0f, 85.0f),
-	Spectrum(5000.0f, 5000.0f, 5000.0f)
-);
-
 int32_t width = 1024;
 int32_t height = 768;
 
@@ -88,18 +83,25 @@ void trace(const Scene& scene, const Camera& camera,
 			 */
 			Vector3f wi;
 			float pdf;
+			const auto& lights = scene.getLights();
+			int32_t numLights = static_cast<int32_t>(lights.size());
+			int32_t lightIdx = std::min(
+				static_cast<int32_t>(rng.randomFloat() * numLights),
+				numLights
+			);
+			const auto& light = lights[lightIdx];
 			Spectrum lightEmission = light.sample(intersection, &wi, &pdf);
 			auto lightRay = Ray(intersection + wi * EPS, wi);
 			lightRay.maxT = length(intersection - light.position());
 			if (!scene.intersectShadow(lightRay)) {
 				if (light.isDelta()) {
 					Spectrum f = isect.bsdf->f(wo, wi);
-					color = color + ((pathWeight * (f * lightEmission))
-						* (abs(dot(nl, wi)) / pdf));
+					color = color + (pathWeight * f * lightEmission
+						* (abs(dot(nl, wi)) / pdf) * (float)numLights);
 					if (i > 0) {
 						secondaryColor = 
 							secondaryColor + (pathWeight * f * lightEmission
-							* (abs(dot(nl, wi)) / pdf));
+							* (abs(dot(nl, wi)) / pdf * (float)numLights));
 					}
 				} else {
 					assert(false);
