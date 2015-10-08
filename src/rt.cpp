@@ -1,47 +1,30 @@
 #include <algorithm>
 #include <cassert>
-#include <chrono>
 #include <cmath>
 #include <cstdio>
-#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <thread>
-#include <type_traits>
 #include <vector>
 
 #include "bitmap.h"
 #include "camera.h"
-#include "constants.h"
 #include "frame.h"
 #include "rng.h"
 #include "semaphore.h"
 #include "timer.h"
-#include "vector.h"
 
 #include "light.h"
 #include "scene.h"
 #include "spectrum.h"
-#include "sphere.h"
-#include "triangle.h"
-
-auto scene_ = Scene::makeCornellBox();
 
 auto light = PointLight(
 	Vector3f(50.0f, 60.0f, 85.0f),
 	Spectrum(5000.0f, 5000.0f, 5000.0f)
 );
 
-int32_t width = 1031;
-int32_t height = 775;
-
-auto camera_ = Camera(
-    Vector3f(50.0f, 48.0f, 220.0f),
-    normal(Vector3f(0.0f, -0.042612f, -1.0f)),
-    width,
-    height,
-	0.785398f
-);
+int32_t width = 1024;
+int32_t height = 768;
 
 auto framebuffer = Bitmap(width, height);
 auto framebufferSecondary = Bitmap(width, height);
@@ -54,7 +37,8 @@ struct Tile {
     Tile(Vector2i start, Vector2i end) : start(start), end(end) { }
 };
 
-void trace(int pixelIdx, int32_t x, int32_t y)
+void trace(const Scene& scene, const Camera& camera,
+	int pixelIdx, int32_t x, int32_t y)
 {
 	using std::abs;
 
@@ -62,20 +46,29 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	auto finalColor = Spectrum(0.0f);
 	auto finalColorSecondary = Spectrum(0.0f);
     RayHitInfo isect;
-    static const int maxIter = 32;
+    static constexpr int maxIter = 32;
     static const float invMaxIter = 1.0f / maxIter;
+	/*
+	 * This loop should be part of renderer task (concern). It only samples new
+	 * direction and gives it to integrator. Perhaps it can find the first
+	 * intersection...
+	 */
 	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color { 0.0f };
 		Spectrum secondaryColor { 0.0f };
 		Spectrum pathWeight { 1.0f };
 
-        auto currentRay = camera_.sample(
+        auto currentRay = camera.sample(
             x + rng.randomFloat() - 0.5f,
             y + rng.randomFloat() - 0.5f
         );
 
+		/*
+		 * This loop should be part of integrator, so that its easily seperable
+		 * from renderer
+		 */
 		for (int i = 0; i < 5; ++i) {
-			if (!scene_.intersect(currentRay, &isect))
+			if (!scene.intersect(currentRay, &isect))
 				break;
 
 			/*
@@ -98,7 +91,7 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 			Spectrum lightEmission = light.sample(intersection, &wi, &pdf);
 			auto lightRay = Ray(intersection + wi * EPS, wi);
 			lightRay.maxT = length(intersection - light.position());
-			if (!scene_.intersectShadow(lightRay)) {
+			if (!scene.intersectShadow(lightRay)) {
 				if (light.isDelta()) {
 					Spectrum f = isect.bsdf->f(wo, wi);
 					color = color + ((pathWeight * (f * lightEmission))
@@ -143,18 +136,39 @@ void trace(int pixelIdx, int32_t x, int32_t y)
 	framebufferSecondary.set(x, y, finalColorSecondary.toRGB());
 }
 
-void processTile(Tile tile)
-{
-    for (int32_t y = tile.start.y; y < tile.end.y; ++y) {
-        for (int32_t x = tile.start.x; x < tile.end.x; ++x) {
-            trace(x + y * width, x, y);
-        }
-    }
-}
+class Task {
+public:
+	virtual ~Task() { }
+
+	virtual void run() = 0;
+};
+
+class TileTask : public Task {
+public:
+	TileTask(const Tile& tile, const Scene& scene, const Camera& camera)
+		: tile_(tile)
+		, scene_(scene)
+		, camera_(camera)
+	{ }
+
+	void run() override
+	{
+		for (int32_t y = tile_.start.y; y < tile_.end.y; ++y) {
+			for (int32_t x = tile_.start.x; x < tile_.end.x; ++x) {
+				trace(scene_, camera_, x + y * camera_.getWidth(), x, y);
+			}
+		}
+	}
+
+private:
+	Tile tile_;
+	const Scene& scene_;
+	const Camera& camera_;
+};
 
 std::vector<std::thread> workers;
 
-using WorkQueue = std::vector<Tile>;
+using WorkQueue = std::vector<std::unique_ptr<Task>>;
 WorkQueue workQueue;
 
 using LockGuard = std::unique_lock<std::mutex>;
@@ -167,11 +181,13 @@ size_t numUnfinished = 0;
 
 static const int32_t numWorkers = 8;
 
-void enqueuTiles(const WorkQueue& tasks)
+void enqueuTasks(WorkQueue& tasks)
 {
     {
         LockGuard lock(queueMutex);
-        workQueue.insert(end(workQueue), begin(tasks), end(tasks));
+		for (auto& task : tasks) {
+			workQueue.push_back(std::move(task));
+		}
         printf("Done enqueueing tasks\n");
     }
     {
@@ -180,7 +196,7 @@ void enqueuTiles(const WorkQueue& tasks)
     }
 }
 
-void runTiles()
+void runTasks()
 {
     printf("Running tasks\n");
     auto size = workQueue.size();
@@ -189,21 +205,21 @@ void runTiles()
     }
 }
 
-void tileTask()
+void taskEntry()
 {
     for (;;) {
         taskSemahore.wait();
 
-        Tile currentTile;
+        std::unique_ptr<Task> currentTile;
         {
             LockGuard lock(queueMutex);
             if (workQueue.size() == 0)
                 break;
-            currentTile = workQueue.back();
+            currentTile = std::move(workQueue.back());
             workQueue.pop_back();
         }
 
-        processTile(currentTile);
+		currentTile->run();
 
         {
             LockGuard lock(runMutex);
@@ -211,7 +227,7 @@ void tileTask()
             if (unfinished <= 0)
             {
                 runCondition.notify_one();
-                printf("tasks finished\n");
+                printf("Tasks finished\n");
                 break;
             }
         }
@@ -231,7 +247,7 @@ void workQueueInit()
     printf("Init work queue\n");
     workers.reserve(numWorkers);
     for (int32_t i = 0; i < numWorkers; ++i) {
-        workers.push_back(std::thread(tileTask));
+        workers.push_back(std::thread(taskEntry));
     }
 }
 
@@ -247,13 +263,13 @@ void workQueueShutdown()
 
 class Renderer {
 public:
-	void render(const Scene& /*scene*/, const Camera& camera) const
+	void render(const Scene& scene, const Camera& camera) const
 	{
 		Vector2i numFullTiles;
 		numFullTiles.x = camera.getWidth() / tileSize_;
 		numFullTiles.y = camera.getHeight() / tileSize_;
 
-		std::vector<Tile> tiles;
+		std::vector<std::unique_ptr<Task>> tiles;
 		tiles.reserve(numFullTiles.x * numFullTiles.y);
 
 		Vector2i start;
@@ -265,7 +281,9 @@ public:
 				start.y = j * tileSize_;
 				end.x = (i + 1) * tileSize_;
 				end.y = (j + 1) * tileSize_;
-				tiles.push_back(Tile(start, end));
+				tiles.push_back(std::make_unique<TileTask>(
+					Tile(start, end), scene, camera
+				));
 			}
 		}
 
@@ -276,7 +294,9 @@ public:
 				start.y = i * tileSize_;
 				end.x = camera.getWidth();
 				end.y = (i + 1) * tileSize_;
-				tiles.push_back(Tile(start, end));
+				tiles.push_back(std::make_unique<TileTask>(
+					Tile(start, end), scene, camera
+				));
 			}
 		}
 
@@ -287,19 +307,22 @@ public:
 				start.y = numFullTiles.y * tileSize_;
 				end.x = (i + 1) * tileSize_;
 				end.y = camera.getHeight();
-				tiles.push_back(Tile(start, end));
+				tiles.push_back(std::make_unique<TileTask>(
+					Tile(start, end), scene, camera
+				));
 			}
 		}
 
 		if (leftoverWidth > 0 && leftoverHeight > 0) {
-			tiles.push_back(Tile(
+			tiles.push_back(std::make_unique<TileTask>(Tile(
 				Vector2i(numFullTiles.x * tileSize_, numFullTiles.y * tileSize_),
-				Vector2i(camera.getWidth(), camera.getHeight())
+				Vector2i(camera.getWidth(), camera.getHeight())),
+				scene, camera
 			));
 		}
 
-		enqueuTiles(tiles);
-		runTiles();
+		enqueuTasks(tiles);
+		runTasks();
 		waitForCompletion();
 	}
 
@@ -312,11 +335,21 @@ int main(int /*argc*/, const char* /*argv*/[])
 	Renderer renderer;
 
     workQueueInit();
-	scene_.preprocess();
+
+	auto scene = Scene::makeCornellBox();
+	auto camera = Camera(
+		Vector3f(50.0f, 48.0f, 220.0f),
+		normal(Vector3f(0.0f, -0.042612f, -1.0f)),
+		width,
+		height,
+		0.785398f
+	);
+
+	scene.preprocess();
 
 	Timer timer;
 	timer.start();
-	renderer.render(scene_, camera_);
+	renderer.render(scene, camera);
 	auto elapsed = timer.elapsed();
 
 	auto nanosec = elapsed.count();
