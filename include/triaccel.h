@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "platform.h"
 #include "vector.h"
 
 #include "triangle.h"
@@ -83,7 +84,7 @@ inline void project(TriAccel* const triaccel, const Triangle& triangle,
 }
 
 static const int modulo[] = {1, 2, 0, 1};
-__forceinline bool intersect(const TriAccel& triaccel, const Ray& ray,
+FINLINE bool intersect(const TriAccel& triaccel, const Ray& ray,
 	RayHitInfo* const info)
 {
 #define ku modulo[triaccel.k]

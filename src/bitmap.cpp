@@ -1,5 +1,6 @@
 #include "bitmap.h"
 
+#include <cmath>
 #include <cstdint>
 #include <algorithm>
 #include <fstream>

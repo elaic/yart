@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "platform.h"
 #include "vector.h"
 
 #include "sphere.h"
@@ -26,7 +27,7 @@ public:
 
 	~Scene()
 	{
-		_aligned_free(triaccel_);
+    	FREE_ALIGNED(triaccel_);
 	}
 
 	void preprocess()
@@ -38,11 +39,9 @@ public:
 
 		// No need to actually free and alloc always, just do it when there is
 		// more space required
-		_aligned_free(triaccel_);
+		FREE_ALIGNED(triaccel_);
 
-		triaccel_ = (TriAccel*)_aligned_malloc(
-			triangleCount_ * sizeof(TriAccel), 16
-		);
+        ALLOC_ALIGNED((void**)&triaccel_, 16, triangleCount_ * sizeof(TriAccel));
 
 		auto triaccelIdx = 0;
 		for (int meshIdx = 0; meshIdx < meshes_.size(); ++meshIdx) {

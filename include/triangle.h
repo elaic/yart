@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "platform.h"
+
 #include "bsdf.h"
 #include "vector.h"
 
@@ -37,7 +39,7 @@ struct Triangle {
 // Moller-Trumbore ray triangle intersection
 // Winding order is counter clock wise (ccw)
 // TODO: test for performance against raw array of points
-__forceinline bool intersect(const Ray& ray, const Triangle& triangle,
+FINLINE bool intersect(const Ray& ray, const Triangle& triangle,
     const std::vector<Vector3f>& points, RayHitInfo* const hitInfo)
 {
     const auto& v0 = points[triangle.idx0];

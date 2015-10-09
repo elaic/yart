@@ -226,8 +226,8 @@ struct Ray {
 
     Ray(Vector3f o, Vector3f d)
 		: orig(o)
-		, dir(d)
 		, minT(0.0f)
+		, dir(d)
 		, maxT(std::numeric_limits<float>::infinity())
 	{ }
 };

@@ -22,7 +22,6 @@ public:
 	}
 
 private:
-	Clock clock_;
 	Timepoint start_;
 };
 

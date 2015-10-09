@@ -27,6 +27,7 @@ set(INCLUDES
 	${INCL}/constants.h
 	${INCL}/frame.h
 	${INCL}/light.h
+    ${INCL}/platform.h
 	${INCL}/range.h
 	${INCL}/rng.h
 	${INCL}/scene.h
