@@ -7,7 +7,6 @@
 #include <thread>
 #include <vector>
 
-#include "bitmap.h"
 #include "camera.h"
 #include "frame.h"
 #include "rng.h"
@@ -21,9 +20,6 @@
 int32_t width = 1024;
 int32_t height = 768;
 
-auto framebuffer = Bitmap(width, height);
-auto framebufferSecondary = Bitmap(width, height);
-
 struct Tile {
     Vector2i start;
     Vector2i end;
@@ -32,14 +28,13 @@ struct Tile {
     Tile(Vector2i start, Vector2i end) : start(start), end(end) { }
 };
 
-void trace(const Scene& scene, const Camera& camera,
+void trace(const Scene& scene, Camera& camera,
 	int pixelIdx, int32_t x, int32_t y)
 {
 	using std::abs;
 
 	Rng rng(pixelIdx);
 	auto finalColor = Spectrum(0.0f);
-	auto finalColorSecondary = Spectrum(0.0f);
     RayHitInfo isect;
     static constexpr int maxIter = 32;
     static const float invMaxIter = 1.0f / maxIter;
@@ -98,11 +93,6 @@ void trace(const Scene& scene, const Camera& camera,
 					Spectrum f = isect.bsdf->f(wo, wi);
 					color = color + (pathWeight * f * lightEmission
 						* (abs(dot(nl, wi)) / pdf) * (float)numLights);
-					if (i > 0) {
-						secondaryColor = 
-							secondaryColor + (pathWeight * f * lightEmission
-							* (abs(dot(nl, wi)) / pdf * (float)numLights));
-					}
 				} else {
 					assert(false);
 					color = Spectrum(0.0f);
@@ -131,11 +121,9 @@ void trace(const Scene& scene, const Camera& camera,
 		}
 
 		finalColor = finalColor + (color * invMaxIter);
-		finalColorSecondary = finalColorSecondary + (secondaryColor * invMaxIter);
 	}
 
-    framebuffer.set(x, y, finalColor.toRGB());
-	framebufferSecondary.set(x, y, finalColorSecondary.toRGB());
+    camera.accumulate(x, y, finalColor.toRGB());
 }
 
 class Task {
@@ -147,7 +135,7 @@ public:
 
 class TileTask : public Task {
 public:
-	TileTask(const Tile& tile, const Scene& scene, const Camera& camera)
+	TileTask(const Tile& tile, const Scene& scene, Camera& camera)
 		: tile_(tile)
 		, scene_(scene)
 		, camera_(camera)
@@ -165,7 +153,7 @@ public:
 private:
 	Tile tile_;
 	const Scene& scene_;
-	const Camera& camera_;
+	Camera& camera_;
 };
 
 std::vector<std::thread> workers;
@@ -265,7 +253,7 @@ void workQueueShutdown()
 
 class Renderer {
 public:
-	void render(const Scene& scene, const Camera& camera) const
+	void render(const Scene& scene, Camera& camera) const
 	{
 		Vector2i numFullTiles;
 		numFullTiles.x = camera.getWidth() / tileSize_;
@@ -365,13 +353,14 @@ int main(int /*argc*/, const char* /*argv*/[])
 
 	printf("Time spent rendering: %lldm %llds %lldms\n", minutes, seconds, milisec);
 
-	framebuffer.write("image.bmp");
-	framebufferSecondary.write("image-secondary.bmp");
+	camera.saveImage("image.bmp");
 
 	workQueueShutdown();
 
+#if defined(_WIN32)
 	int a;
 	std::cin >> a;
+#endif
 
 	return 0;
 }
