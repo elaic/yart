@@ -44,6 +44,7 @@ set(INCLUDES
 set(SRCS
 	${SRC_DIR}/rt.cpp
 	${SRC_DIR}/bitmap.cpp
+	${SRC_DIR}/bsdf.cpp
 	${SRC_DIR}/renderer.cpp
 	${SRC_DIR}/scene.cpp
 	${SRC_DIR}/scheduler.cpp)
