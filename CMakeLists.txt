@@ -28,6 +28,7 @@ set(INCLUDES
 	${INCL}/frame.h
 	${INCL}/light.h
     ${INCL}/platform.h
+    ${INCL}/qmc.h
 	${INCL}/range.h
 	${INCL}/renderer.h
 	${INCL}/rng.h

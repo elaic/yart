@@ -14,75 +14,6 @@ T clamp(T val, T min, T max)
 	return std::min(std::max(val, min), max);
 }
 
-inline void concentricSampleDisk(float u1, float u2, float* dx, float* dy)
-{
-	using std::cos;
-	using std::sin;
-	float r, theta;
-
-	float sx = 2 * u1 - 1;
-	float sy = 2 * u2 - 1;
-
-	if (sx == 0.0f && sy == 0.0f) {
-		*dx = 0.0f;
-		*dy = 0.0f;
-		return;
-	}
-
-	if (sx >= -sy) {
-		if (sx > sy) {
-			r = sx;
-			if (sy > 0.0f)	theta = sy / r;
-			else			theta = 8.0f + sy / r;
-		} else {
-			r = sy;
-			theta = 2.0f - sx / r;
-		}
-	} else {
-		if (sx <= sy) {
-			r = -sx;
-			theta = 4.0f - sy / r;
-		} else {
-			r = -sy;
-			theta = 6.0f - sx / r;
-		}
-	}
-
-	theta *= PI / 4.0f;
-
-	*dx = r * cos(theta);
-	*dy = r * sin(theta);
-}
-
-inline Vector3f cosHemisphereSample(float u1, float u2)
-{
-	using std::sqrt;
-	using std::max;
-	Vector3f ret;
-	concentricSampleDisk(u1, u2, &ret.x, &ret.y);
-	ret.z = sqrt(max(0.0f, 1.0f - ret.x * ret.x - ret.y * ret.y));
-	return ret;
-}
-
-inline float cosHemispherePdf(float cosTheta, float /*phi*/)
-{
-	return cosTheta * INV_PI;
-}
-
-inline Vector3f uniformHemisphereSample(float u1, float u2)
-{
-	using std::sqrt;
-	using std::max;
-
-	float z = u1;
-	float r = sqrt(max(0.0f, 1.0f - z * z));
-	float phi = 2.0f * PI * u2;
-	float x = r * std::cos(phi);
-	float y = r * std::sin(phi);
-
-	return Vector3f(x, y, z);
-}
-
 inline float cosTheta(const Vector3f& w)
 {
 	return w.z;
@@ -120,61 +51,6 @@ inline float sinPhi(const Vector3f& w)
 inline bool sameHemisphere(const Vector3f& w, const Vector3f& w1)
 {
 	return w.z * w1.z > 0.0f;
-}
-
-/*
- * cosi	-
- * cost	-
- * etai	-
- * etat	-
- */
-inline Spectrum fresnelDielectric(float cosi, float cost, const Spectrum& etai,
-	const Spectrum& etat)
-{
-	Spectrum Rparallel =
-		(etat * cosi - etai * cost) /
-		(etat * cosi + etai * cost);
-	Spectrum Rperpendicular =
-		(etai * cosi - etat * cost) /
-		(etai * cosi + etat * cost);
-	return (Rparallel * Rparallel + Rperpendicular * Rperpendicular) / 2.0f;
-}
-
-template <int n>
-inline float pow(float val)
-{
-	return val * pow<n - 1>(val);
-}
-
-template<>
-inline float pow<1>(float val)
-{
-	return val;
-}
-
-inline float fresnelDielectricSchlick(float cosi, float etai, float etat)
-{
-	float R0 = (etai - etat) / (etai + etat);
-	R0 *= R0;
-
-	float Rcos = R0 + (1 - R0) * pow<5>(1 - cosi);
-	return Rcos;
-}
-
-/*
- * eta	- wavelength dependent index od refraction
- * k	- wavelength dependent absorption coefficient
- */
-inline Spectrum fresnelConductor(float cosi, const Spectrum& eta,
-	const Spectrum& k)
-{
-	Spectrum tmp = (eta * eta + k * k) * cosi * cosi;
-	Spectrum Rparl2 = (tmp - (2.0f * eta * cosi) + 1.0f) /
-		(tmp + (2.0f * eta * cosi) + 1.0f);
-	Spectrum tmp2 = eta * eta + k * k;
-	Spectrum Rperp2 = (tmp2 - (2.0f * eta * cosi) + cosi * cosi) /
-		(tmp2 + (2.0f * eta * cosi) + cosi * cosi);
-	return (Rparl2 + Rperp2) / 2.0f;
 }
 
 class MicrofacetDistribution {

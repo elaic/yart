@@ -1,5 +1,62 @@
 #include "bsdf.h"
 
+#include "qmc.h"
+
+/*
+ * cosi	-
+ * cost	-
+ * etai	-
+ * etat	-
+ */
+inline Spectrum fresnelDielectric(float cosi, float cost, const Spectrum& etai,
+	const Spectrum& etat)
+{
+	Spectrum Rparallel =
+		(etat * cosi - etai * cost) /
+		(etat * cosi + etai * cost);
+	Spectrum Rperpendicular =
+		(etai * cosi - etat * cost) /
+		(etai * cosi + etat * cost);
+	return (Rparallel * Rparallel + Rperpendicular * Rperpendicular) / 2.0f;
+}
+
+template <int n>
+inline float pow(float val)
+{
+	return val * pow<n - 1>(val);
+}
+
+template<>
+inline float pow<1>(float val)
+{
+	return val;
+}
+
+inline float fresnelDielectricSchlick(float cosi, float etai, float etat)
+{
+	float R0 = (etai - etat) / (etai + etat);
+	R0 *= R0;
+
+	float Rcos = R0 + (1 - R0) * pow<5>(1 - cosi);
+	return Rcos;
+}
+
+/*
+ * eta	- wavelength dependent index od refraction
+ * k	- wavelength dependent absorption coefficient
+ */
+inline Spectrum fresnelConductor(float cosi, const Spectrum& eta,
+	const Spectrum& k)
+{
+	Spectrum tmp = (eta * eta + k * k) * cosi * cosi;
+	Spectrum Rparl2 = (tmp - (2.0f * eta * cosi) + 1.0f) /
+		(tmp + (2.0f * eta * cosi) + 1.0f);
+	Spectrum tmp2 = eta * eta + k * k;
+	Spectrum Rperp2 = (tmp2 - (2.0f * eta * cosi) + cosi * cosi) /
+		(tmp2 + (2.0f * eta * cosi) + cosi * cosi);
+	return (Rparl2 + Rperp2) / 2.0f;
+}
+
 float Blinn::d(const Vector3f& wh) const
 {
     float cosTetaH = absCosTheta(wh);
@@ -218,7 +275,8 @@ Spectrum TorranceSparrowConductor::sample(const Vector3f& wo, Vector3f* wi,
     return f(wo, *wi);
 }
 
-float TorranceSparrowConductor::G(const Vector3f& wo, const Vector3f& wi, const Vector3f& wh) const
+float TorranceSparrowConductor::G(const Vector3f& wo, const Vector3f& wi,
+    const Vector3f& wh) const
 {
     float nDotWh = absCosTheta(wh);
     float nDotWo = absCosTheta(wo);
