@@ -17,9 +17,6 @@
 #include "scene.h"
 #include "spectrum.h"
 
-int32_t width = 1024;
-int32_t height = 768;
-
 struct Tile {
     Vector2i start;
     Vector2i end;
@@ -325,6 +322,9 @@ int main(int /*argc*/, const char* /*argv*/[])
 	Renderer renderer;
 
     workQueueInit();
+
+    auto width = 1024;
+    auto height = 768;
 
 	auto scene = Scene::makeCornellBox();
 	auto camera = Camera(
