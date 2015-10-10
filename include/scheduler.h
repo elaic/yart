@@ -1,31 +1,26 @@
 #if !defined(SCHEDULER_H)
 #define SCHEDULER_H
 
-#include <condition_variable>
-#include <deque>
-#include <mutex>
-#include <thread>
 #include <vector>
 
-class Task
-{
+class Task {
 public:
+	virtual ~Task() { }
+
 	virtual void run() = 0;
 };
 
-class Scheduler {
-public:
-	Scheduler();
+using WorkQueue = std::vector<std::unique_ptr<Task>>;
 
-private:
-	void scheduleWork();
+void enqueuTasks(WorkQueue& tasks);
 
-private:
-	std::deque<Task> taskQueue_;
-	std::vector<std::thread> threads_;
-	std::mutex taskMutex_;
-	std::condition_variable taskCondition;
-};
+void runTasks();
+
+void waitForCompletion();
+
+void workQueueInit();
+
+void workQueueShutdown();
 
 #endif // SCHEDULER_H
 

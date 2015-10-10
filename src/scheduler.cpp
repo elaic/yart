@@ -1,36 +1,102 @@
 #include "scheduler.h"
 
-#include <cstdio>
+#include <algorithm>
+#include <cstdint>
+#include <thread>
 
-static void dispatchThread(class Thread*);
+#include "semaphore.h"
 
-class Thread {
-public:
-	Thread()
-	{
-		thread_ = std::thread(dispatchThread, this);
-	}
+std::vector<std::thread> workers;
 
-	virtual void run() = 0;
+WorkQueue workQueue;
+using LockGuard = std::unique_lock<std::mutex>;
+std::mutex queueMutex;
+std::mutex runMutex;
+std::condition_variable runCondition;
+semaphore taskSemahore(0);
 
-private:
-	std::thread thread_;
-};
+size_t numUnfinished = 0;
 
-void dispatchThread(Thread* thr)
+static const int32_t numWorkers = 8;
+
+void enqueuTasks(WorkQueue& tasks)
 {
-	thr->run();
+    {
+        LockGuard lock(queueMutex);
+		for (auto& task : tasks) {
+			workQueue.push_back(std::move(task));
+		}
+        printf("Done enqueueing tasks\n");
+    }
+    {
+        LockGuard lock(runMutex);
+        numUnfinished = workQueue.size();
+    }
 }
 
-class WorkerThread : public Thread {
-	void run() override
-	{
-		printf("Hello, world!");
-	}
-};
-
-void Scheduler::scheduleWork()
+void runTasks()
 {
-
+    printf("Running tasks\n");
+    auto size = workQueue.size();
+    while (size-- > 0) {
+        taskSemahore.post();
+    }
 }
+
+void taskEntry()
+{
+    for (;;) {
+        taskSemahore.wait();
+
+        std::unique_ptr<Task> currentTile;
+        {
+            LockGuard lock(queueMutex);
+            if (workQueue.size() == 0)
+                break;
+            currentTile = std::move(workQueue.back());
+            workQueue.pop_back();
+        }
+
+		currentTile->run();
+
+        {
+            LockGuard lock(runMutex);
+            auto unfinished = --numUnfinished;
+            if (unfinished <= 0)
+            {
+                runCondition.notify_one();
+                printf("Tasks finished\n");
+                break;
+            }
+        }
+    }
+}
+
+void waitForCompletion()
+{
+    printf("Wait for task completion\n");
+    LockGuard lock(runMutex);
+    while (numUnfinished > 0)
+        runCondition.wait(lock);
+}
+
+void workQueueInit()
+{
+    printf("Init work queue\n");
+    workers.reserve(numWorkers);
+    for (int32_t i = 0; i < numWorkers; ++i) {
+        workers.push_back(std::thread(taskEntry));
+    }
+}
+
+void workQueueShutdown()
+{
+    printf("Shutdown work queue\n");
+    waitForCompletion();
+    for (int32_t i = 0; i < numWorkers; ++i) {
+        taskSemahore.post();
+    }
+    std::for_each(begin(workers), end(workers), [&](auto& t){ t.join(); });
+}
+
 
