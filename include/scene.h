@@ -6,6 +6,7 @@
 #include "platform.h"
 #include "vector.h"
 
+#include "light.h"
 #include "sphere.h"
 #include "triaccel.h"
 #include "triangle.h"

@@ -29,6 +29,7 @@ set(INCLUDES
 	${INCL}/light.h
     ${INCL}/platform.h
 	${INCL}/range.h
+	${INCL}/renderer.h
 	${INCL}/rng.h
 	${INCL}/scene.h
 	${INCL}/scheduler.h
@@ -43,6 +44,7 @@ set(INCLUDES
 set(SRCS
 	${SRC_DIR}/rt.cpp
 	${SRC_DIR}/bitmap.cpp
+	${SRC_DIR}/renderer.cpp
 	${SRC_DIR}/scene.cpp
 	${SRC_DIR}/scheduler.cpp)
 

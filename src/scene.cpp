@@ -1,5 +1,4 @@
 #include "scene.h"
-#include "light.h"
 
 Scene Scene::makeCornellBox()
 {
