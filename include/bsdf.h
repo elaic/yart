@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <memory>
 
 #include "constants.h"
 #include "spectrum.h"

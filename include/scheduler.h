@@ -2,6 +2,7 @@
 #define SCHEDULER_H
 
 #include <vector>
+#include <memory>
 
 class Task {
 public:
