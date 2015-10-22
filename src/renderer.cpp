@@ -18,12 +18,19 @@ struct Tile {
     Tile(Vector2i start, Vector2i end) : start(start), end(end) { }
 };
 
-FINLINE void trace(const Scene& scene, Camera& camera,
-	int pixelIdx, int32_t x, int32_t y)
+class Integrator {
+public:
+    virtual ~Integrator() = 0;
+    virtual void integrate(const Scene& scene, Camera& camera,
+        int32_t x, int32_t y) = 0;
+
+};
+
+FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 {
 	using std::abs;
 
-	Rng rng(pixelIdx);
+	Rng rng(y * camera.getWidth() + x);
 	auto finalColor = Spectrum(0.0f);
     RayHitInfo isect;
     static constexpr int maxIter = 32;
@@ -128,7 +135,7 @@ public:
 	{
 		for (int32_t y = tile_.start.y; y < tile_.end.y; ++y) {
 			for (int32_t x = tile_.start.x; x < tile_.end.x; ++x) {
-				trace(scene_, camera_, x + y * camera_.getWidth(), x, y);
+				trace(scene_, camera_, x, y);
 			}
 		}
 	}
