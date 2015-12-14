@@ -1,6 +1,8 @@
 #if !defined(QMC_H)
 #define QMC_H
 
+#include <algorithm>
+
 #include "vector.h"
 
 inline void concentricSampleDisk(float u1, float u2, float* dx, float* dy)
@@ -70,6 +72,30 @@ inline Vector3f uniformHemisphereSample(float u1, float u2)
 	float y = r * std::sin(phi);
 
 	return Vector3f(x, y, z);
+}
+
+inline float uniformHemispherePdf()
+{
+	return INV_2PI;
+}
+
+inline Vector3f uniformSphereSample(float u1, float u2)
+{
+	using std::sqrt;
+	using std::max;
+
+	float z = 1.0f - 2.0f * u1;
+	float r = sqrt(max(0.0f, 1.0f - z * z));
+	float phi = 2.0f * PI * u2;
+	float x = r * std::cos(phi);
+	float y = r * std::sin(phi);
+
+	return Vector3f(x, y, z);
+}
+
+inline float uniformSpherePdf()
+{
+	return 1.0f / (4.0f * PI);
 }
 
 #endif // QMC_H

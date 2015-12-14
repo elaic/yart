@@ -19,5 +19,7 @@
     #error "Unsupported OS!"
 #endif
 
+#define UNUSED(a) ((void)(a))
+
 #endif // PLATFORM_H
 

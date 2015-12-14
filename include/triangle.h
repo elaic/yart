@@ -9,14 +9,6 @@
 #include "bsdf.h"
 #include "vector.h"
 
-struct RayHitInfo {
-    float t;
-    Vector3f normal;
-    float u;
-    float v;
-    Bsdf* bsdf;
-};
-
 // This is the traditional triangle implementation. While it is memory
 // efficient, it would seem that it is quite cache unfriendly. Perhaps
 // implementation where all vertices are stored by value should be tested...

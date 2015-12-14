@@ -1,6 +1,8 @@
 #include "bsdf.h"
 
+#include "platform.h"
 #include "qmc.h"
+#include "utils.h"
 
 /*
  * cosi	-
@@ -18,18 +20,6 @@ inline Spectrum fresnelDielectric(float cosi, float cost, const Spectrum& etai,
 		(etai * cosi - etat * cost) /
 		(etai * cosi + etat * cost);
 	return (Rparallel * Rparallel + Rperpendicular * Rperpendicular) / 2.0f;
-}
-
-template <int n>
-inline float pow(float val)
-{
-	return val * pow<n - 1>(val);
-}
-
-template<>
-inline float pow<1>(float val)
-{
-	return val;
 }
 
 inline float fresnelDielectricSchlick(float cosi, float etai, float etat)
@@ -88,8 +78,8 @@ void Blinn::sample(const Vector3f& wo, Vector3f* wi, float u1,
  */
 Spectrum Lambertian::f(const Vector3f& wo, const Vector3f& wi) const
 {
-    ((void)wo);
-    ((void)wi);
+	UNUSED(wo);
+	UNUSED(wi);
     return reflectance_ * INV_PI;
 }
 
@@ -109,16 +99,16 @@ Spectrum Lambertian::sample(const Vector3f& wo, Vector3f* wi, float u1,
  */
 Spectrum PerfectConductor::f(const Vector3f& wo, const Vector3f& wi) const
 {
-    (void(wo));
-    (void(wi));
+	UNUSED(wo);
+	UNUSED(wi);
     return Spectrum(0.0f, 0.0f, 0.0f);
 }
 
 Spectrum PerfectConductor::sample(const Vector3f& wo, Vector3f* wi, float u1,
     float u2, float* pdf) const
 {
-    (void(u1));
-    (void(u2));
+	UNUSED(u1);
+	UNUSED(u2);
     wi->x = -wo.x;
     wi->y = -wo.y;
     wi->z = wo.z;
@@ -133,16 +123,16 @@ Spectrum PerfectConductor::sample(const Vector3f& wo, Vector3f* wi, float u1,
  */
 Spectrum PerfectDielectric::f(const Vector3f& wo, const Vector3f& wi) const
 {
-    (void(wo));
-    (void(wi));
+    UNUSED(wo);
+    UNUSED(wi);
     return Spectrum(0.0f, 0.0f, 0.0f);
 }
 
 Spectrum PerfectDielectric::sample(const Vector3f& wo, Vector3f* wi, float u1,
     float u2, float* pdf) const
 {
-    (void(u1));
-    (void(u2));
+	UNUSED(u1);
+	UNUSED(u2);
     bool entering = cosTheta(wo) > 0;
     float eta = entering ? 1.0f / eta_ : eta_;
     float sini2 = sinTheta2(wo);
@@ -168,16 +158,16 @@ Spectrum PerfectDielectric::sample(const Vector3f& wo, Vector3f* wi, float u1,
  */
 Spectrum FresnelConductor::f(const Vector3f& wo, const Vector3f& wi) const
 {
-    (void(wo));
-    (void(wi));
+	UNUSED(wo);
+	UNUSED(wi);
     return Spectrum(0.0f);
 }
 
 Spectrum FresnelConductor::sample(const Vector3f& wo, Vector3f* wi, float u1,
     float u2, float* pdf) const
 {
-    (void(u1));
-    (void(u2));
+	UNUSED(u1);
+	UNUSED(u2);
     wi->x = -wo.x;
     wi->y = -wo.y;
     wi->z = wo.z;
@@ -193,15 +183,15 @@ Spectrum FresnelConductor::sample(const Vector3f& wo, Vector3f* wi, float u1,
  */
 Spectrum FresnelDielectric::f(const Vector3f& wo, const Vector3f& wi) const
 {
-    (void(wo));
-    (void(wi));
+	UNUSED(wo);
+	UNUSED(wi);
     return Spectrum(0.0f);
 }
 
 Spectrum FresnelDielectric::sample(const Vector3f& wo, Vector3f* wi, float u1,
     float u2, float* pdf) const
 {
-    (void(u2));
+    UNUSED(u2);
     bool entering = cosTheta(wo) > 0;
     float eta = entering ? 1.0f / eta_ : eta_;
     float sini2 = sinTheta2(wo);

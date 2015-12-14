@@ -17,10 +17,10 @@ class Scene {
 public:
 	Scene(
 		const std::vector<TriangleMesh>& meshes, 
-		const std::vector<Sphere>& spheres,
-		const std::vector<PointLight>& lights)
+		const std::vector<std::shared_ptr<Shape>>& shapes,
+		const std::vector<std::shared_ptr<Light>>& lights)
 		: meshes_(meshes)
-		, spheres_(spheres)
+		, shapes_(shapes)
 		, lights_(lights)
 		, triaccel_(nullptr)
 		, triangleCount_(0)
@@ -65,23 +65,12 @@ public:
 	bool intersect(const Ray& ray, RayHitInfo* const isect) const
 	{
 		using ::intersect;
-		float d;
 		isect->t = ray.maxT;
 		isect->t = std::numeric_limits<float>::infinity();
-		// not sure if this is safe, but probably better than uninitialized
-		int id = -1;
-		for (auto i = 0; i < spheres_.size(); ++i) {
-			d = spheres_[i].intersect(ray);
-			if (d < isect->t) {
-				isect->t = d;
-				id = i;
-			}
-		}
+		isect->areaLight = nullptr;
 
-		if (isect->t < ray.maxT) {
-			isect->normal = normal((ray.orig + isect->t * ray.dir) -
-				spheres_[id].position);
-			isect->bsdf = spheres_[id].bsdf.get();
+		for (const auto& shape : shapes_) {
+			shape->intersect(ray, isect);
 		}
 
 		auto triIdx = -1;
@@ -104,17 +93,15 @@ public:
 	bool intersectShadow(const Ray& ray) const
 	{
 		using ::intersect;
+		RayHitInfo hitInfo;
+		hitInfo.t = ray.maxT;
 
-		float d;
-		for (auto i = 0; i < spheres_.size(); ++i) {
-			d = spheres_[i].intersect(ray);
-			if (d < ray.maxT) {
+		for (const auto& shape : shapes_) {
+			if (shape->intersect(ray, &hitInfo)) {
 				return true;
 			}
 		}
 
-		RayHitInfo hitInfo;
-		hitInfo.t = ray.maxT;
 		for (int32_t i = 0; i < triangleCount_; ++i) {
 			if (intersect(triaccel_[i], ray, &hitInfo)) {
 				return true;
@@ -124,7 +111,7 @@ public:
 		return false;
 	}
 
-	const std::vector<PointLight>& getLights() const
+	const std::vector<std::shared_ptr<Light>>& getLights() const
 	{
 		return lights_;
 	}
@@ -133,8 +120,8 @@ public:
 
 private:
 	std::vector<TriangleMesh> meshes_;
-	std::vector<Sphere> spheres_;
-	std::vector<PointLight> lights_;
+	std::vector<std::shared_ptr<Shape>> shapes_;
+	std::vector<std::shared_ptr<Light>> lights_;
 
 	TriAccel* triaccel_;
 	int32_t triangleCount_;

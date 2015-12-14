@@ -84,6 +84,22 @@ struct TVector3 {
 		return TVector3(x / rhs, y / rhs, z / rhs);
 	}
 
+	inline TVector3 operator+=(const TVector3& rhs)
+	{
+		x += rhs.x;
+		y += rhs.y;
+		z += rhs.z;
+		return *this;
+	}
+
+	inline TVector3 operator-=(const TVector3& rhs)
+	{
+		x -= rhs.x;
+		y -= rhs.y;
+		z -= rhs.z;
+		return *this;
+	}
+
 	inline TVector3& operator+=(const T rhs)
 	{
 		x += rhs;
@@ -231,6 +247,18 @@ struct Ray {
 		, dir(d)
 		, maxT(std::numeric_limits<float>::infinity())
 	{ }
+};
+
+class AreaLight;
+
+class Bsdf;
+struct RayHitInfo {
+	float t;
+	Vector3f normal;
+	float u;
+	float v;
+	Bsdf* bsdf;
+	AreaLight* areaLight;
 };
 
 #endif // VECTOR_H

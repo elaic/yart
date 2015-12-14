@@ -82,6 +82,7 @@ public:
 	virtual Spectrum f(const Vector3f& wo, const Vector3f& wi) const = 0;
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi,
 		float u1, float u2, float* pdf) const = 0;
+	virtual bool isDelta() const = 0;
 };
 
 class Lambertian : public Bsdf {
@@ -93,6 +94,11 @@ public:
 
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override;
+
+	virtual bool isDelta() const override
+	{
+		return false;
+	}
 
 private:
 	Spectrum reflectance_;
@@ -107,6 +113,11 @@ public:
 
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override;
+
+	virtual bool isDelta() const override
+	{
+		return true;
+	}
 private:
 	Spectrum reflectance_;
 };
@@ -122,6 +133,11 @@ public:
 
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override;
+
+	virtual bool isDelta() const override
+	{
+		return true;
+	}
 
 private:
 	Spectrum reflectance_;
@@ -142,6 +158,11 @@ public:
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override;
 
+	virtual bool isDelta() const override
+	{
+		return true;
+	}
+
 private:
 	Spectrum reflectance_;
 	Spectrum eta_;
@@ -159,6 +180,11 @@ public:
 
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi, float u1,
 		float u2, float* pdf) const override;
+
+	virtual bool isDelta() const override
+	{
+		return true;
+	}
 
 private:
 	Spectrum reflectance_;
@@ -183,6 +209,11 @@ public:
 
 	virtual Spectrum sample(const Vector3f& wo, Vector3f* wi,
 		float u1, float u2, float* pdf) const override;
+
+	virtual bool isDelta() const override
+	{
+		return false;
+	}
 
 	float G(const Vector3f& wo, const Vector3f& wi, const Vector3f& wh) const;
 

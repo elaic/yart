@@ -50,13 +50,19 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
             y + rng.randomFloat() - 0.5f
         );
 
+		bool evaluateDirectLightHit = true;
+
 		/*
 		 * This loop should be part of integrator, so that its easily seperable
 		 * from renderer
 		 */
-		for (int i = 0; i < 5; ++i) {
+		for (int i = 0; i < 10; ++i) {
 			if (!scene.intersect(currentRay, &isect))
 				break;
+
+			if (evaluateDirectLightHit) {
+
+			}
 
 			/*
 			 * variables used below:
@@ -79,21 +85,18 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 			int32_t numLights = static_cast<int32_t>(lights.size());
 			int32_t lightIdx = std::min(
 				static_cast<int32_t>(rng.randomFloat() * numLights),
-				numLights
+				numLights - 1
 			);
 			const auto& light = lights[lightIdx];
-			Spectrum lightEmission = light.sample(intersection, &wi, &pdf);
+			Vector3f sampledPosition;
+			Spectrum lightEmission = light->sample(intersection, &wi, &pdf,
+				&sampledPosition, rng.randomFloat(), rng.randomFloat());
 			auto lightRay = Ray(intersection + wi * EPS, wi);
-			lightRay.maxT = length(intersection - light.position());
+			lightRay.maxT = length(intersection - sampledPosition);
 			if (!scene.intersectShadow(lightRay)) {
-				if (light.isDelta()) {
-					Spectrum f = isect.bsdf->f(wo, wi);
-					color = color + (pathWeight * f * lightEmission
-						* (abs(dot(nl, wi)) / pdf) * (float)numLights);
-				} else {
-					assert(false);
-					color = Spectrum(0.0f);
-				}
+				Spectrum f = isect.bsdf->f(wo, wi);
+				color = color + (pathWeight * f * lightEmission
+					* (abs(dot(nl, wi)) / pdf) * (float)numLights);
 			}
 
 			/*
@@ -110,10 +113,11 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 			if (refl.y() == 0.0f)
 				break;
 
+			evaluateDirectLightHit = isect.bsdf->isDelta();
+
 			Vector3f dir = hitFrame.toWorld(wi);
 
-			pathWeight = pathWeight * refl 
-				* abs(dot(dir, nl)) * (1.0f / pdf);
+			pathWeight = pathWeight * refl * abs(dot(dir, nl)) / pdf;
 			currentRay = { intersection + dir * EPS, dir };
 		}
 

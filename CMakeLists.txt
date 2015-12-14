@@ -35,11 +35,13 @@ set(INCLUDES
 	${INCL}/scene.h
 	${INCL}/scheduler.h
 	${INCL}/semaphore.h
+	${INCL}/shape.h
 	${INCL}/spectrum.h
 	${INCL}/sphere.h
 	${INCL}/timer.h
 	${INCL}/triaccel.h
 	${INCL}/triangle.h
+	${INCL}/utils.h
 	${INCL}/vector.h)
 
 set(SRCS
