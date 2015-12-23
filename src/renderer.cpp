@@ -33,7 +33,7 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 	Rng rng(y * camera.getWidth() + x);
 	auto finalColor = Spectrum(0.0f);
     RayHitInfo isect;
-    static constexpr int maxIter = 32;
+    static constexpr int maxIter = 128;
     static const float invMaxIter = 1.0f / maxIter;
 	/*
 	 * This loop should be part of renderer task (concern). It only samples new
@@ -64,6 +64,9 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 
 			}
 
+			if (!isect.bsdf)
+				break;
+
 			/*
 			 * variables used below:
 			 * wi - incident direction
@@ -81,24 +84,28 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 			 */
 			Vector3f wi;
 			float pdf;
+
 			const auto& lights = scene.getLights();
 			int32_t numLights = static_cast<int32_t>(lights.size());
 			int32_t lightIdx = std::min(
 				static_cast<int32_t>(rng.randomFloat() * numLights),
 				numLights - 1
 			);
+
 			const auto& light = lights[lightIdx];
 			Vector3f sampledPosition;
 			Spectrum lightEmission = light->sample(intersection, &wi, &pdf,
 				&sampledPosition, rng.randomFloat(), rng.randomFloat());
+
 			auto lightRay = Ray(intersection + wi * EPS, wi);
 			lightRay.maxT = length(intersection - sampledPosition);
+
 			if (!scene.intersectShadow(lightRay)) {
 				Spectrum f = isect.bsdf->f(wo, wi);
 				color = color + (pathWeight * f * lightEmission
 					* (abs(dot(nl, wi)) / pdf) * (float)numLights);
 			}
-
+			break;
 			/*
              * continue tracing
              */

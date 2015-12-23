@@ -11,8 +11,8 @@ Scene Scene::makeCornellBox()
 			Spectrum(0.999f, 0.999f, 0.999f), Bxdf::FresTran),
 		std::make_shared<Sphere>(8.5f, Vector3f(50.0f, 8.5f, 60.0f),
 			Spectrum(0.999f, 0.999f, 0.999f), Bxdf::TorranceSparrow),
-		//std::make_shared<Sphere>(10.0f, Vector3f(50.0f, 60.0f, 85.0f),
-		//	Spectrum(0.0f, 0.0f, 0.0f), Bxdf::Diff),
+		//std::make_shared<Sphere>(2.0f, Vector3f(50.0f, 60.0f, 85.0f),
+		//	Spectrum(0.0f, 0.0f, 0.0f), Bxdf::None),
 	};
 
 	using MeshList = std::vector<TriangleMesh>;
@@ -141,21 +141,21 @@ Scene Scene::makeCornellBox()
 
 	using LightList = std::vector<std::shared_ptr<Light>>;
 	LightList lights = {
-		//std::make_shared<PointLight>(
-		//	Vector3f(50.0f, 60.0f, 85.0f),
-		//	Spectrum(5000.0f, 5000.0f, 5000.0f)
-		//),
+		std::make_shared<PointLight>(
+			Vector3f(50.0f, 60.0f, 85.0f),
+			Spectrum(5000.0f, 5000.0f, 5000.0f)
+		),
 		//std::make_shared<AreaLight>(
 		//	shapes[3],
 		//	Spectrum(5000.0f, 5000.0f, 5000.0f)
 		//),
-		std::make_shared<AreaLight>(
-			std::make_shared<Sphere>(
-				10.0f, Vector3f(50.0f, 60.0f, 85.0f),
-				Spectrum(0.0f, 0.0f, 0.0f), Bxdf::Diff
-			),
-			Spectrum(500.0f, 500.0f, 500.0f)
-		),
+		//std::make_shared<AreaLight>(
+		//	std::make_shared<Sphere>(
+		//		10.0f, Vector3f(50.0f, 60.0f, 85.0f),
+		//		Spectrum(0.0f, 0.0f, 0.0f), Bxdf::Diff
+		//	),
+		//	Spectrum(500.0f, 500.0f, 500.0f)
+		//),
 	};
 
 	return Scene(meshes, shapes, lights);

@@ -17,6 +17,10 @@ endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
+# project dependencies
+# include_directories(${PROJECT_SOURCE_DIR}/external/yaml-cpp-release-0.5.2/include)
+# add_subdirectory(${PROJECT_SOURCE_DIR}/external/yaml-cpp-release-0.5.2)
+
 set(INCL ${PROJECT_SOURCE_DIR}/include)
 set(SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 

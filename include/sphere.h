@@ -9,6 +9,7 @@
 #include "utils.h"
 
 enum Bxdf : int32_t {
+	None,
 	Diff,
 	Spec,
 	Trans,
@@ -24,6 +25,10 @@ public:
 		, position_(position)
 	{
 		switch (bxdf) {
+		case Bxdf::None:
+			bsdf_ = nullptr;
+			break;
+
 		case Bxdf::Diff:
 			bsdf_ = std::make_shared<Lambertian>(color);
 			break;
@@ -57,7 +62,7 @@ public:
 
 	bool intersect(const Ray& ray, RayHitInfo* const hitInfo) const override
 	{
-		static const double EPS_S = 0.0f;
+		static const double EPS_S = 1e-4f;
 		Vector3f op = position_ - ray.orig;
 		double b = dot(op, ray.dir);
 		double det = b * b - op.length2() + radius_ * radius_;
@@ -88,10 +93,17 @@ public:
 
 	Vector3f sample(float u1, float u2, float* pdf) const override
 	{
+#if 1
+		UNUSED(u1);
+		UNUSED(u2);
+		UNUSED(pdf);
+		return position_ + Vector3f(0.0f, -radius_, 0.0f);
+#else
 		Vector3f pos = uniformSphereSample(u1, u2) * radius_;
 		pos += position_;
 		*pdf = uniformSpherePdf();
 		return pos;
+#endif
 	}
 
 	float area() const override
@@ -103,6 +115,7 @@ private:
 	float radius_;
 	Vector3f position_;
 	std::shared_ptr<Bsdf> bsdf_;
+	
 };
 
 #endif // SPHERE_H
