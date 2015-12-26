@@ -1,6 +1,27 @@
 language: cpp
+
+matrix:
+    include:
+        - env: CLANG_VERSION=3.7 CPP=14 LIBCXX=On
+          os: linux
+          addons: &clang3.7
+          apt:
+              packages:
+                  - clang-3.7
+              sources:
+                  - ubuntu-toolchain-r-test
+                  - llvm-toolchain-precise
+
+        - env: GCC_VERSION=5.0 CPP=14 LIBCXX=Off
+          os: linux
+          addons: &gcc5
+          apt:
+              packages:
+                  - g++-5
+                  - gcc-5
+              sources:
+                  - ubuntu-toolchain-t-test
+
 script:
-    - cmake
-compiler:
-    - clang
-    - gcc
+    - cmake ..
+    - make
