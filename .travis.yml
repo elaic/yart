@@ -40,5 +40,7 @@ matrix:
 script:
     - mkdir -p build
       && cd build
+      && ls $HOME/cmake
+      && ls $HOME/cmake/bin
       && $HOME/cmake/bin/cmake ..
       && make
