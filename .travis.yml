@@ -4,7 +4,7 @@ matrix:
     include:
         - env: CLANG_VERSION=3.7 CPP=14 LIBCXX=On
           os: linux
-          addons: &clang3.7
+          addons: &clang37
           apt:
               packages:
                   - clang-3.7
