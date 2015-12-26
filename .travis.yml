@@ -15,27 +15,23 @@ install:
         ;
       fi
 
+addons:
+    apt:
+        packages:
+            - clang-3.7
+            - gcc-5
+            - g++-5
+        sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise
+
 matrix:
     include:
-        - env: CLANG_VERSION=3.7 CPP=14 LIBCXX=On
+        - env: CLANG_VERSION=3.7 CPP=14 LIBCXX=On CXX=clang-3.7
           os: linux
-          addons:
-          apt:
-              packages:
-                  - clang-3.7
-              sources:
-                  - ubuntu-toolchain-r-test
-                  - llvm-toolchain-precise
 
-        - env: GCC_VERSION=5.0 CPP=14 LIBCXX=Off
+        - env: GCC_VERSION=5.0 CPP=14 LIBCXX=Off CXX=g++-5
           os: linux
-          addons:
-          apt:
-              packages:
-                  - g++-5
-                  - gcc-5
-              sources:
-                  - ubuntu-toolchain-t-test
 
 script:
     - mkdir -p build
