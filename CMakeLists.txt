@@ -4,7 +4,7 @@ project(rt)
 if (UNIX)
 	# -fno-rtti - disables rtti
 	# -Werror - add when spectrum class is implemented
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -Werror -Wall -Wpedantic -stdlib=libc++ -std=c++1z -O3 -g")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -Werror -Wall -Wpedantic -std=c++1z -O3 -g")
 elseif (MSVC)
 	# /GR- - disables rtti
 	# /sdl - additional checks, add when spectrum class is implemented

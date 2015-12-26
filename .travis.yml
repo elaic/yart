@@ -18,7 +18,6 @@ install:
 addons:
     apt:
         packages:
-            - clang-3.7
             - gcc-5
             - g++-5
         sources:
@@ -27,9 +26,6 @@ addons:
 
 matrix:
     include:
-        - env: CXX_COMPILER=clang
-          os: linux
-
         - env: CXX_COMPILER=gcc
           os: linux
 
