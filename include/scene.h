@@ -45,10 +45,10 @@ public:
         ALLOC_ALIGNED((void**)&triaccel_, 16, triangleCount_ * sizeof(TriAccel));
 
 		auto triaccelIdx = 0;
-		for (int meshIdx = 0; meshIdx < meshes_.size(); ++meshIdx) {
+		for (mesh_size_t meshIdx = 0; meshIdx < meshes_.size(); ++meshIdx) {
 			const auto& mesh = meshes_[meshIdx];
 			const auto& triangles = mesh.getTriangles();
-			for (int triIdx = 0; triIdx < triangles.size(); ++triIdx) {
+			for (TriangleMesh::tri_size_t triIdx = 0; triIdx < triangles.size(); ++triIdx) {
 				const auto& tri = triangles[triIdx];
 				project(
 					(triaccel_ + triaccelIdx),
@@ -119,6 +119,10 @@ public:
 	static Scene makeCornellBox();
 
 private:
+    using mesh_size_t = std::vector<TriangleMesh>::size_type;
+    using shape_size_t = std::vector<Shape>::size_type;
+    using light_size_t = std::vector<Light>::size_type;
+
 	std::vector<TriangleMesh> meshes_;
 	std::vector<std::shared_ptr<Shape>> shapes_;
 	std::vector<std::shared_ptr<Light>> lights_;

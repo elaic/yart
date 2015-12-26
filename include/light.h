@@ -11,7 +11,7 @@
 
 class Light {
 public:
-	virtual ~Light() = 0 { };
+	virtual ~Light() = 0;
 
 	virtual Spectrum sample(const Vector3f& scenePosition, Vector3f* wi,
 		float* pdf, Vector3f* sampledPosition, float u1, float u2) const = 0;
@@ -20,6 +20,10 @@ public:
 
 	virtual bool isDelta() const = 0;
 };
+
+inline Light::~Light()
+{
+}
 
 class PointLight : public Light {
 public:

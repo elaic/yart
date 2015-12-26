@@ -7,6 +7,7 @@
 #include "platform.h"
 
 #include "bsdf.h"
+#include "utils.h"
 #include "vector.h"
 
 // This is the traditional triangle implementation. While it is memory
@@ -66,6 +67,9 @@ FINLINE bool intersect(const Ray& ray, const Triangle& triangle,
 
 class TriangleMesh {
 public:
+    using tri_size_t = std::vector<Triangle>::size_type;
+
+public:
     TriangleMesh(const std::vector<Vector3f>& vertices,
         const std::vector<Triangle>& triangles,
         const std::shared_ptr<Bsdf> bsdf)
@@ -79,7 +83,7 @@ public:
         RayHitInfo localHitInfo;
         auto currentT = std::numeric_limits<float>::max();
         auto hitId = -1;
-        for (auto i = 0; i < triangles_.size(); ++i) {
+        for (tri_size_t i = 0; i < triangles_.size(); ++i) {
             if (::intersect(ray, triangles_[i], vertices_, &localHitInfo) &&
                 localHitInfo.t < currentT && localHitInfo.t > 0.0f) {
                 *hitInfo = localHitInfo;
@@ -125,6 +129,7 @@ public:
 	}
 
 private:
+
     std::vector<Vector3f> vertices_;
     std::vector<Triangle> triangles_;
     std::shared_ptr<Bsdf> bsdf_;
