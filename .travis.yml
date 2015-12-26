@@ -1,10 +1,12 @@
 language: cpp
 
+sudo: false
+
 install:
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
         wget --no-check-certificate http://www.cmake.org/files/v3.3/cmake-3.3.2-Linux-i386.tar.gz
         && tar -xzf cmake-3.3.2-Linux-i386.tar.gz
-        && sudo cp -fR cmake-3.3.2-Linux-i386/* /usr
+        && cp -fR cmake-3.3.2-Linux-i386/* /usr/local/
         ;
       else
         brew update
@@ -16,7 +18,7 @@ matrix:
     include:
         - env: CLANG_VERSION=3.7 CPP=14 LIBCXX=On
           os: linux
-          addons: &clang37
+          addons:
           apt:
               packages:
                   - clang-3.7
@@ -26,7 +28,7 @@ matrix:
 
         - env: GCC_VERSION=5.0 CPP=14 LIBCXX=Off
           os: linux
-          addons: &gcc5
+          addons:
           apt:
               packages:
                   - g++-5
