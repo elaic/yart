@@ -16,7 +16,7 @@
 #elif defined(__linux)
     #define FINLINE inline __attribute__((always_inline))
     #define ALLOC_ALIGNED(ptr, alignment, size) \
-        { int dummy = posix_memalign((ptr), (alignment), (size)); UNUSED(dummy) }
+        { int dummy = posix_memalign((ptr), (alignment), (size)); UNUSED(dummy); }
     #define FREE_ALIGNED(ptr) free(ptr)
 #else
     #error "Unsupported OS!"
