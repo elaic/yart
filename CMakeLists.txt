@@ -5,6 +5,9 @@ if (UNIX)
 	# -fno-rtti - disables rtti
 	# -Werror - add when spectrum class is implemented
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -Werror -Wall -Wpedantic -std=c++1z -O3 -g")
+    if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lpthread")
+    endif()
 elseif (MSVC)
 	# /GR- - disables rtti
 	# /sdl - additional checks, add when spectrum class is implemented
