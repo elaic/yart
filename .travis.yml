@@ -23,5 +23,7 @@ matrix:
                   - ubuntu-toolchain-t-test
 
 script:
+    - mkdir -p build
+    - cd build
     - cmake ..
     - make
