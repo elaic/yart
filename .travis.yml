@@ -27,16 +27,21 @@ addons:
 
 matrix:
     include:
-        - env: CLANG_VERSION=3.7 CPP=14 LIBCXX=On CXX=clang-3.7
+        - env: CXX_COMPILER=clang
           os: linux
 
-        - env: GCC_VERSION=5.0 CPP=14 LIBCXX=Off CXX=g++-5
+        - env: CXX_COMPILER=gcc
           os: linux
+
+before_script:
+    - if [ "${CXX_COMPILER}" = "clang" ]; then
+        export CXX=clang-3.7;
+      elif ["${CXX_COMPILER}" = "gcc" ]; then
+        export CXX=g++-5
+      fi
 
 script:
     - mkdir -p build
       && cd build
-      && ls $HOME/cmake
-      && ls $HOME/cmake/bin
       && $HOME/cmake/bin/cmake ..
       && make
