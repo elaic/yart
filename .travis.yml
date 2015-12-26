@@ -6,7 +6,8 @@ install:
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
         wget --no-check-certificate http://www.cmake.org/files/v3.3/cmake-3.3.2-Linux-i386.tar.gz
         && tar -xzf cmake-3.3.2-Linux-i386.tar.gz
-        && cp -fR cmake-3.3.2-Linux-i386/* /usr/local/
+        && mkdir -p $HOME/cmake
+        && cp -fR cmake-3.3.2-Linux-i386/* $HOME/cmake
         ;
       else
         brew update
@@ -39,5 +40,5 @@ matrix:
 script:
     - mkdir -p build
       && cd build
-      && cmake ..
+      && $HOME/cmake/bin/cmake ..
       && make
