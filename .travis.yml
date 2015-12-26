@@ -40,7 +40,7 @@ before_script:
     - if [ "${CXX_COMPILER}" = "clang" ]; then
         export CXX=clang-3.7;
       elif [ "${CXX_COMPILER}" = "gcc" ]; then
-        export CXX=g++-5;
+        export CXX=g++-5 CC=gcc-5;
       fi
 
 script:
