@@ -28,7 +28,7 @@ public:
 
 	~Scene()
 	{
-    	FREE_ALIGNED(triaccel_);
+    	alignedFree(triaccel_);
 	}
 
 	void preprocess()
@@ -40,9 +40,9 @@ public:
 
 		// No need to actually free and alloc always, just do it when there is
 		// more space required
-		FREE_ALIGNED(triaccel_);
+		alignedFree(triaccel_);
 
-        ALLOC_ALIGNED((void**)&triaccel_, 16, triangleCount_ * sizeof(TriAccel));
+        triaccel_ = alignedAlloc<TriAccel>(triangleCount_, 16);
 
 		auto triaccelIdx = 0;
 		for (mesh_size_t meshIdx = 0; meshIdx < meshes_.size(); ++meshIdx) {
@@ -74,7 +74,7 @@ public:
 		}
 
 		auto triIdx = -1;
-		for (int32_t i = 0; i < triangleCount_; ++i) {
+		for (size_t i = 0; i < triangleCount_; ++i) {
 			if (intersect(triaccel_[i], ray, isect)) {
 				triIdx = i;
 			}
@@ -102,7 +102,7 @@ public:
 			}
 		}
 
-		for (int32_t i = 0; i < triangleCount_; ++i) {
+		for (size_t i = 0; i < triangleCount_; ++i) {
 			if (intersect(triaccel_[i], ray, &hitInfo)) {
 				return true;
 			}
@@ -128,7 +128,7 @@ private:
 	std::vector<std::shared_ptr<Light>> lights_;
 
 	TriAccel* triaccel_;
-	int32_t triangleCount_;
+	size_t triangleCount_;
 };
 
 #endif // SCENE_H

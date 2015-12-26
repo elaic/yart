@@ -1,26 +1,47 @@
 #if !defined(PLATFORM_H)
 #define PLATFORM_H
 
+#include <cstdlib>
+
 #define UNUSED(a) ((void)(a))
 
 #if defined(_WIN32)
     #define FINLINE __forceinline
-    #define ALLOC_ALIGNED(ptr, alignment, size) \
-        *(ptr) = _aligned_malloc((size), (alignment));
-    #define FREE_ALIGNED(ptr) _aligned_free(ptr)
 #elif defined(__APPLE__)
     #define FINLINE inline __attribute__((always_inline))
-    #include <cstdlib>
-    #define ALLOC_ALIGNED(ptr, alignment, size) posix_memalign((ptr), (alignment), (size))
-    #define FREE_ALIGNED(ptr) free(ptr)
 #elif defined(__linux)
     #define FINLINE inline __attribute__((always_inline))
-    #define ALLOC_ALIGNED(ptr, alignment, size) \
-        { int dummy = posix_memalign((ptr), (alignment), (size)); UNUSED(dummy); }
-    #define FREE_ALIGNED(ptr) free(ptr)
 #else
     #error "Unsupported OS!"
 #endif
+
+template <typename T>
+inline T* alignedAlloc(size_t numElements, int32_t alignment)
+{
+    const size_t allocSize = numElements * sizeof(T);
+
+#if defined(_WIN32)
+    return (T*)_aligned_malloc(allocSize, alignment);
+#elif defined(__APPLE__) || defined(__linux)
+    T* result;
+    int err = posix_memalign((void**)&result, alignment, allocSize);
+    return err == 0 ? (T*)result : nullptr;
+#else
+    #error "Unsupported OS!"
+    return nullptr;
+#endif
+}
+
+inline void alignedFree(void* ptr)
+{
+#if defined(_WIN32)
+    _aligned_free(ptr);
+#elif defined(__APPLE__) || defined(__linux)
+    free(ptr);
+#else
+    #error "Unsupported OS!"
+#endif
+}
 
 #endif // PLATFORM_H
 
