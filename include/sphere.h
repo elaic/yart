@@ -93,7 +93,7 @@ public:
 
 	Vector3f sample(float u1, float u2, float* pdf) const override
 	{
-		Vector3f pos = uniformSphereSample(u1, u2) * 1.001f * radius_;
+		Vector3f pos = uniformSphereSample(u1, u2) * radius_;
 		pos += position_;
 		*pdf = uniformSpherePdf();
 		return pos;
