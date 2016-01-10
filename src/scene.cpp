@@ -1,8 +1,12 @@
 #include "scene.h"
 
+#define AREA_LIGHT
+#if defined(AREA_LIGHT)
+    #define WITH_GEOMETRY
+#endif
+
 Scene Scene::makeCornellBox()
 {
-
 	using ShapeList = std::vector<std::shared_ptr<Shape>>;
 	ShapeList shapes = {
 		std::make_shared<Sphere>(16.5f, Vector3f(27.0f, 16.5f, 47.0f),
@@ -11,8 +15,10 @@ Scene Scene::makeCornellBox()
 			Spectrum(0.999f, 0.999f, 0.999f), Bxdf::FresTran),
 		std::make_shared<Sphere>(8.5f, Vector3f(50.0f, 8.5f, 60.0f),
 			Spectrum(0.999f, 0.999f, 0.999f), Bxdf::TorranceSparrow),
-		//std::make_shared<Sphere>(2.0f, Vector3f(50.0f, 60.0f, 85.0f),
-		//	Spectrum(0.0f, 0.0f, 0.0f), Bxdf::None),
+#if defined(WITH_GEOMETRY)
+		std::make_shared<Sphere>(4.0f, Vector3f(50.0f, 60.0f, 85.0f),
+			Spectrum(0.0f, 0.0f, 0.0f), Bxdf::None),
+#endif
 	};
 
 	using MeshList = std::vector<TriangleMesh>;
@@ -141,21 +147,27 @@ Scene Scene::makeCornellBox()
 
 	using LightList = std::vector<std::shared_ptr<Light>>;
 	LightList lights = {
+#if !defined(AREA_LIGHT)
 		std::make_shared<PointLight>(
 			Vector3f(50.0f, 60.0f, 85.0f),
 			Spectrum(5000.0f, 5000.0f, 5000.0f)
 		),
-		//std::make_shared<AreaLight>(
-		//	shapes[3],
-		//	Spectrum(5000.0f, 5000.0f, 5000.0f)
-		//),
-		//std::make_shared<AreaLight>(
-		//	std::make_shared<Sphere>(
-		//		10.0f, Vector3f(50.0f, 60.0f, 85.0f),
-		//		Spectrum(0.0f, 0.0f, 0.0f), Bxdf::Diff
-		//	),
-		//	Spectrum(500.0f, 500.0f, 500.0f)
-		//),
+#else
+    #if defined(WITH_GEOMETRY)
+		std::make_shared<AreaLight>(
+			shapes[3],
+			Spectrum(500.0f, 500.0f, 500.0f)
+		),
+    #else
+		std::make_shared<AreaLight>(
+			std::make_shared<Sphere>(
+				10.0f, Vector3f(50.0f, 60.0f, 85.0f),
+				Spectrum(0.0f, 0.0f, 0.0f), Bxdf::Diff
+			),
+			Spectrum(500.0f, 500.0f, 500.0f)
+		),
+    #endif
+#endif
 	};
 
 	return Scene(meshes, shapes, lights);

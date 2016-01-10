@@ -93,17 +93,10 @@ public:
 
 	Vector3f sample(float u1, float u2, float* pdf) const override
 	{
-#if 1
-		UNUSED(u1);
-		UNUSED(u2);
-		UNUSED(pdf);
-		return position_ + Vector3f(0.0f, -radius_, 0.0f);
-#else
-		Vector3f pos = uniformSphereSample(u1, u2) * radius_;
+		Vector3f pos = uniformSphereSample(u1, u2) * 1.001f * radius_;
 		pos += position_;
 		*pdf = uniformSpherePdf();
 		return pos;
-#endif
 	}
 
 	float area() const override
