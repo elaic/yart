@@ -85,6 +85,7 @@ public:
 			auto triangleIdx = triaccel_[triIdx].triIdx;
 			isect->normal = meshes_[meshIdx].getNormal(triangleIdx);
 			isect->bsdf = meshes_[meshIdx].getBsdf();
+            isect->areaLight = nullptr;
 		}
 
 		return isect->t < ray.maxT;

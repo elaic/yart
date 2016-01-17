@@ -170,5 +170,10 @@ Scene Scene::makeCornellBox()
 #endif
 	};
 
+#if defined(WITH_GEOMETRY)
+    shapes[3]->setLight((AreaLight*)lights[0].get());
+#endif
+
 	return Scene(meshes, shapes, lights);
 }
+

@@ -74,6 +74,7 @@ public:
 		hitInfo->u = 0;
 		hitInfo->v = 0;
 		hitInfo->bsdf = bsdf_.get();
+        hitInfo->areaLight = getLight();
 
 		double t = b - det;
 		if (t > EPS_S && t < hitInfo->t) {

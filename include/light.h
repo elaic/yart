@@ -18,6 +18,8 @@ public:
 
 	virtual Spectrum power() const = 0;
 
+    virtual Spectrum intensity() const = 0;
+
 	virtual bool isDelta() const = 0;
 };
 
@@ -50,6 +52,11 @@ public:
 	{
 		return intensity_ * 4.0f * PI;
 	}
+
+    Spectrum intensity() const override
+    {
+        return intensity_;
+    }
 
 	bool isDelta() const override
 	{
@@ -86,6 +93,11 @@ public:
 		return intensity_ * area_ * PI;
 	}
 
+    Spectrum intensity() const override
+    {
+        return intensity_;
+    }
+
 	bool isDelta() const override
 	{
 		return false;
@@ -98,3 +110,4 @@ private:
 };
 
 #endif // LIGHT_H
+
