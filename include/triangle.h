@@ -88,7 +88,7 @@ public:
                 localHitInfo.t < currentT && localHitInfo.t > 0.0f) {
                 *hitInfo = localHitInfo;
                 currentT = localHitInfo.t;
-                hitId = i;
+                hitId = (int)i;
             }
         }
 

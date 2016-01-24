@@ -54,8 +54,8 @@ public:
 					(triaccel_ + triaccelIdx),
 					tri,
 					mesh.getVertices(),
-					triIdx,
-					meshIdx
+					(int)triIdx,
+					(int)meshIdx
 				);
 				++triaccelIdx;
 			}
@@ -66,7 +66,6 @@ public:
 	{
 		using ::intersect;
 		isect->t = ray.maxT;
-		isect->t = std::numeric_limits<float>::infinity();
 		isect->areaLight = nullptr;
 
 		for (const auto& shape : shapes_) {
@@ -74,7 +73,7 @@ public:
 		}
 
 		auto triIdx = -1;
-		for (size_t i = 0; i < triangleCount_; ++i) {
+		for (auto i = 0; i < triangleCount_; ++i) {
 			if (intersect(triaccel_[i], ray, isect)) {
 				triIdx = i;
 			}
