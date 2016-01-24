@@ -48,11 +48,6 @@ int main(int /*argc*/, const char* /*argv*/[])
 
 	workQueueShutdown();
 
-#if defined(_WIN32)
-	int a;
-	std::cin >> a;
-#endif
-
 	return 0;
 }
 
