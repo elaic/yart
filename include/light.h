@@ -13,8 +13,11 @@ class Light {
 public:
 	virtual ~Light() = 0;
 
-	virtual Spectrum sample(const Vector3f& scenePosition, Vector3f* wi,
-		float* pdf, Vector3f* sampledPosition, float u1, float u2) const = 0;
+	virtual Spectrum sample(
+		const Vector3f& scenePosition,
+		Vector3f* wi, float* pdf, Vector3f* sampledPosition, float* epsilon,
+		float u1, float u2
+	) const = 0;
 
 	virtual Spectrum power() const = 0;
 
@@ -37,7 +40,7 @@ public:
 	~PointLight() { }
 
 	Spectrum sample(const Vector3f& scenePosition, Vector3f* wi, float* pdf,
-		Vector3f* sampledPosition, float u1, float u2) const override
+		Vector3f* sampledPosition, float* eps, float u1, float u2) const override
 	{
 		((void)u1);
 		((void)u2);
@@ -45,6 +48,7 @@ public:
 		*wi = normal(toLight);
 		*pdf = 1.0f;
 		*sampledPosition = position_;
+		*eps = 0.0f;
 		return intensity_ / length2(toLight); 
 	}
 
@@ -78,12 +82,13 @@ public:
 	}
 
 	Spectrum sample(const Vector3f& scenePosition, Vector3f* wi, float* pdf,
-		Vector3f* sampledPosition, float u1, float u2) const override
+		Vector3f* sampledPosition, float* eps, float u1, float u2) const override
 	{
 		Vector3f pos = emitter_->sample(u1, u2, pdf);
 		Vector3f toLight = pos - scenePosition;
 		*wi = normal(toLight);
 		*sampledPosition = pos;
+		*eps = 1e-3f;
 		return intensity_ / length2(toLight);
 	}
 

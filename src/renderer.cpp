@@ -33,7 +33,7 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 	Rng rng(y * camera.getWidth() + x);
 	auto finalColor = Spectrum(0.0f);
     RayHitInfo isect;
-    static constexpr int maxIter = 16384;
+    static constexpr int maxIter = 2048;
     static const float invMaxIter = 1.0f / maxIter;
 	/*
 	 * This loop should be part of renderer task (concern). It only samples new
@@ -56,12 +56,12 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 		 * This loop should be part of integrator, so that its easily seperable
 		 * from renderer
 		 */
-		for (int i = 0; i < 10; ++i) {
+		for (auto bounce = 0; bounce < 10; ++bounce) {
 			if (!scene.intersect(currentRay, &isect))
 				break;
 
 			if (evaluateDirectLightHit && isect.areaLight) {
-                color += isect.areaLight->intensity();
+				color += pathWeight * isect.areaLight->intensity();
 			}
 
 			if (!isect.bsdf)
@@ -93,15 +93,13 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 			);
 
 			const auto& light = lights[lightIdx];
+			float eps;
 			Vector3f sampledPosition;
 			Spectrum lightEmission = light->sample(intersection, &wi, &pdf,
-				&sampledPosition, rng.randomFloat(), rng.randomFloat());
+				&sampledPosition, &eps, rng.randomFloat(), rng.randomFloat());
 
 			auto lightRay = Ray(intersection + wi * EPS, wi);
-            // TODO: -1e-3 is only for area light sampling. Add aditional
-            // parameter when sampling light thats going to return per light
-            // type epsilon value
-			lightRay.maxT = length(intersection - sampledPosition) - 1e-3f;
+			lightRay.maxT = length(intersection - sampledPosition) - eps;
 
 			if (!scene.intersectShadow(lightRay)) {
 				Spectrum f = isect.bsdf->f(wo, wi);
