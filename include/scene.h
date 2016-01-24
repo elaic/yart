@@ -73,7 +73,7 @@ public:
 		}
 
 		auto triIdx = -1;
-		for (auto i = 0; i < triangleCount_; ++i) {
+		for (auto i = 0; i < (int)triangleCount_; ++i) {
 			if (intersect(triaccel_[i], ray, isect)) {
 				triIdx = i;
 			}
