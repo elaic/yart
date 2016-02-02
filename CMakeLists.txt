@@ -21,8 +21,10 @@ endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 # project dependencies
-# include_directories(${PROJECT_SOURCE_DIR}/external/yaml-cpp-release-0.5.2/include)
-# add_subdirectory(${PROJECT_SOURCE_DIR}/external/yaml-cpp-release-0.5.2)
+include_directories(${PROJECT_SOURCE_DIR}/external/tinyobjloader)
+set(EXTERNAL_SRCS
+	${PROJECT_SOURCE_DIR}/external/tinyobjloader/tiny_obj_loader.h
+	${PROJECT_SOURCE_DIR}/external/tinyobjloader/tiny_obj_loader.cc)
 
 set(INCL ${PROJECT_SOURCE_DIR}/include)
 set(SRC_DIR ${PROJECT_SOURCE_DIR}/src)
@@ -60,7 +62,8 @@ set(SRCS
 	${SRC_DIR}/scheduler.cpp)
 
 include_directories(${INCL})
-add_executable(rt ${SRCS} ${INCLUDES})
+add_executable(rt ${SRCS} ${INCLUDES} ${EXTERNAL_SRCS})
 
 source_group("include" FILES ${INCLUDES})
 source_group("src" FILES ${SRCS})
+source_group("external\\tinyobjloader" FILES ${EXTERNAL_SRCS})
