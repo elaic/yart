@@ -17,6 +17,7 @@ int main(int /*argc*/, const char* /*argv*/[])
     auto width = 1024;
     auto height = 768;
 
+#if 0
 	auto scene = Scene::makeCornellBox();
 	auto camera = Camera(
 		Vector3f(50.0f, 48.0f, 220.0f),
@@ -25,8 +26,18 @@ int main(int /*argc*/, const char* /*argv*/[])
 		height,
 		0.785398f
 	);
-
 	scene.preprocess();
+#else
+	auto scene = Scene::loadFromObj("D:\\users\\marcin\\projects\\yart\\scenes\\cornell-box\\", "CornellBox-Sphere.obj");
+    scene.preprocess();
+	auto camera = Camera(
+		Vector3f(0.0f, 0.85f, 3.0f),
+		normal(Vector3f(0.0f, 0.0f, -1.0f)),
+		width,
+		height,
+		0.785398f
+	);
+#endif
 
 	Timer timer;
 	timer.start();

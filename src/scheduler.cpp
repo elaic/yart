@@ -23,9 +23,9 @@ void enqueuTasks(WorkQueue& tasks)
 {
     {
         LockGuard lock(queueMutex);
-		for (auto& task : tasks) {
-			workQueue.push_back(std::move(task));
-		}
+        for (auto& task : tasks) {
+            workQueue.push_back(std::move(task));
+        }
         printf("Done enqueueing tasks\n");
     }
     {
@@ -57,7 +57,7 @@ void taskEntry()
             workQueue.pop_back();
         }
 
-		currentTile->run();
+        currentTile->run();
 
         {
             LockGuard lock(runMutex);
@@ -98,5 +98,3 @@ void workQueueShutdown()
     }
     std::for_each(begin(workers), end(workers), [&](auto& t){ t.join(); });
 }
-
-

@@ -24,11 +24,13 @@ public:
 		, lights_(lights)
 		, triaccel_(nullptr)
 		, triangleCount_(0)
+        , triaccel8_(nullptr)
+        , triaccel8Count_(0)
 	{ }
 
 	~Scene()
 	{
-    	alignedFree(triaccel_);
+        alignedFree(triaccel_);
 	}
 
 	void preprocess()
@@ -37,12 +39,16 @@ public:
 		for (const auto& mesh : meshes_) {
 			triangleCount_ += mesh.triangleCount();
 		}
+        // Add 7 to align triaccel8Count to 8
+        triaccel8Count_ = (triangleCount_ + 7) / 8;
 
 		// No need to actually free and alloc always, just do it when there is
 		// more space required
 		alignedFree(triaccel_);
+        alignedFree(triaccel8_);
 
         triaccel_ = alignedAlloc<TriAccel>(triangleCount_, 16);
+        triaccel8_ = alignedAlloc<TriAccel8>(triaccel8Count_, 16);
 
 		auto triaccelIdx = 0;
 		for (mesh_size_t meshIdx = 0; meshIdx < meshes_.size(); ++meshIdx) {
@@ -60,7 +66,44 @@ public:
 				++triaccelIdx;
 			}
 		}
+
+        loadTriaccel8(triaccel8_, triaccel_, triangleCount_);
 	}
+
+    bool intersect8(const Ray& ray, RayHitInfo* const isect) const
+    {
+        using ::intersect;
+        isect->t = ray.maxT;
+        isect->areaLight = nullptr;
+
+        for (const auto& shape : shapes_) {
+            shape->intersect(ray, isect);
+        }
+
+        auto triaccel8Idx = -1;
+        auto chunk8IdxTmp = -1;
+        auto chunk8Idx = -1;
+
+        for (auto i = 0; i < (int)triaccel8Count_; ++i) {
+            if (intersect(triaccel8_[i], ray, isect, &chunk8IdxTmp)) {
+                triaccel8Idx = i;
+                chunk8Idx = chunk8IdxTmp;
+            }
+        }
+
+        if (triaccel8Idx > -1) {
+            assert(chunk8Idx >= 0);
+            auto triIdx = triaccel8Idx * 8 + chunk8Idx;
+
+            auto meshIdx = triaccel_[triIdx].meshIdx;
+            auto triangleIdx = triaccel_[triIdx].triIdx;
+            isect->normal = meshes_[meshIdx].getNormal(triangleIdx);
+            isect->bsdf = meshes_[meshIdx].getBsdf();
+            isect->areaLight = nullptr;
+        }
+
+        return isect->t < ray.maxT;
+    }
 
 	bool intersect(const Ray& ray, RayHitInfo* const isect) const
 	{
@@ -117,6 +160,7 @@ public:
 	}
 
 	static Scene makeCornellBox();
+	static Scene loadFromObj(const std::string& folder, const std::string& file);
 
 private:
     using mesh_size_t = std::vector<TriangleMesh>::size_type;
@@ -129,6 +173,9 @@ private:
 
 	TriAccel* triaccel_;
 	size_t triangleCount_;
+
+    TriAccel8* triaccel8_;
+    size_t triaccel8Count_;
 };
 
 #endif // SCENE_H

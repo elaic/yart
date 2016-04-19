@@ -33,7 +33,7 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 	Rng rng(y * camera.getWidth() + x);
 	auto finalColor = Spectrum(0.0f);
     RayHitInfo isect;
-    static constexpr int maxIter = 2048;
+    static constexpr int maxIter = 4;
     static const float invMaxIter = 1.0f / maxIter;
 	/*
 	 * This loop should be part of renderer task (concern). It only samples new
@@ -42,7 +42,6 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 	 */
 	for (int k = 0; k < maxIter; ++k) {
 		Spectrum color { 0.0f };
-		Spectrum secondaryColor { 0.0f };
 		Spectrum pathWeight { 1.0f };
 
         auto currentRay = camera.sample(
@@ -57,7 +56,7 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 		 * from renderer
 		 */
 		for (auto bounce = 0; bounce < 10; ++bounce) {
-			if (!scene.intersect(currentRay, &isect))
+			if (!scene.intersect8(currentRay, &isect))
 				break;
 
 			if (evaluateDirectLightHit && isect.areaLight) {
@@ -87,6 +86,7 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 
 			const auto& lights = scene.getLights();
 			int32_t numLights = static_cast<int32_t>(lights.size());
+
 			int32_t lightIdx = std::min(
 				static_cast<int32_t>(rng.randomFloat() * numLights),
 				numLights - 1

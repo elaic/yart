@@ -12,7 +12,7 @@ elseif (MSVC)
 	# /GR- - disables rtti
 	# /sdl - additional checks, add when spectrum class is implemented
 	# /Wx - treat warnings as errors, same as above
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /W4 /sdl /WX")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /W4 /sdl /WX /arch:AVX")
 else()
 	message(FATAL_ERROR "Unsupported system")
 endif()

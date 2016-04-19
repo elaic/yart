@@ -1,5 +1,5 @@
 #include "scene.h"
-
+#include "tiny_obj_loader.h"
 
 Scene Scene::makeCornellBox()
 {
@@ -136,6 +136,7 @@ Scene Scene::makeCornellBox()
 		std::make_shared<FresnelConductor>(Spectrum(0.999f, 0.999f, 0.999f),
 			Spectrum(0.16f, 0.55f, 1.75f), Spectrum(4.6f, 2.2f, 1.9f))
 		),
+
 	};
 
 	using LightList = std::vector<std::shared_ptr<Light>>;
@@ -155,3 +156,91 @@ Scene Scene::makeCornellBox()
 	return Scene(meshes, shapes, lights);
 }
 
+Scene Scene::loadFromObj(const std::string& folder, const std::string& file)
+{
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string error;
+
+	auto filepath = folder + file;
+	LoadObj(shapes, materials, error, filepath.c_str(), folder.c_str());
+
+	using BsdfList = std::vector<std::shared_ptr<Bsdf>>;
+	BsdfList bsdfs;
+
+	// Convert tinyobj representation to internal yart representation
+	for (const auto& material : materials)
+	{
+		printf("%s\n", material.name.c_str());
+		printf("\tDiffuse color: %f, %f, %f\n",
+			material.diffuse[0], material.diffuse[1], material.diffuse[2]
+			);
+		printf("\tSpecular color: %f, %f, %f\n",
+			material.specular[0], material.specular[1], material.specular[2]
+			);
+		printf("\n");
+
+		bsdfs.push_back(std::make_shared<Lambertian>(
+			Spectrum(material.diffuse[0], material.diffuse[1], material.diffuse[2]))
+		);
+	}
+
+	using MeshList = std::vector<TriangleMesh>;
+	using VertexList = std::vector<Vector3f>;
+	using TriangleList = std::vector<Triangle>;
+
+	MeshList meshes;
+	for (const auto& shape : shapes) {
+		printf("%s\n", shape.name.c_str());
+		printf("\tNum triangles: %llu\n", shape.mesh.num_vertices.size());
+		printf("\tNum vertices:  %llu\n", shape.mesh.indices.size());
+		printf("\n");
+
+		VertexList vertices;
+		const auto& positions = shape.mesh.positions;
+		vertices.reserve(positions.size() / 3);
+		for (auto i = 0; i < positions.size() / 3; ++i)
+		{
+			vertices.push_back(Vector3f(
+				positions[3 * i],
+				positions[3 * i + 1],
+				positions[3 * i + 2]
+			));
+		}
+
+		TriangleList triangles;
+		const auto& indices = shape.mesh.indices;
+		triangles.reserve(indices.size() / 3);
+		for (auto i = 0; i < indices.size() / 3; ++i)
+		{
+			triangles.push_back(Triangle(
+				indices[3 * i],
+				indices[3 * i + 1],
+				indices[3 * i + 2]
+			));
+		}
+
+		auto matIdx = shape.mesh.material_ids[0];
+		meshes.push_back(TriangleMesh(
+			vertices,
+			triangles,
+			bsdfs[matIdx]
+		));
+	}
+
+	using ShapeList = std::vector<std::shared_ptr<Shape>>;
+	ShapeList shps = {
+		std::make_shared<Sphere>(0.05f, Vector3f(0.0f, 1.0f, -0.5f),
+			Spectrum(0.0f, 0.0f, 0.0f), Bxdf::None),
+	};
+
+	using LightList = std::vector<std::shared_ptr<Light>>;
+	LightList lights = {
+		std::make_shared<AreaLight>(
+			shps[shps.size() - 1],
+			Spectrum(1.0f, 1.0f, 1.0f)
+		),
+	};
+	shps[shps.size() - 1]->setLight((AreaLight*)lights[lights.size() - 1].get());
+	return Scene(meshes, shps, lights);
+}
