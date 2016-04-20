@@ -105,6 +105,29 @@ public:
         return isect->t < ray.maxT;
     }
 
+    bool intersect8Shadow(const Ray& ray) const
+    {
+        using ::intersect;
+        RayHitInfo hitInfo;
+        hitInfo.t = ray.maxT;
+
+        for (const auto& shape : shapes_) {
+            if (shape->intersect(ray, &hitInfo)) {
+                return true;
+            }
+        }
+
+        auto chunk8IdxTmp = -1;
+
+        for (size_t i = 0; i < triaccel8Count_; ++i) {
+            if (intersect(triaccel8_[i], ray, &hitInfo, &chunk8IdxTmp)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 	bool intersect(const Ray& ray, RayHitInfo* const isect) const
 	{
 		using ::intersect;

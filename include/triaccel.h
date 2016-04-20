@@ -115,7 +115,7 @@ inline void loadTriaccel8(
     auto num8Chunks = numTriangles / 8;
     auto remainderTriangles = numTriangles % 8;
 
-    for (int i = 0; i < num8Chunks; ++i) {
+    for (size_t i = 0; i < num8Chunks; ++i) {
         TriAccel8* accel8 = &triaccel8[i];
 
         for (int j = 0; j < 8; ++j) {
@@ -140,7 +140,7 @@ inline void loadTriaccel8(
     }
 
     TriAccel8* accel8 = &triaccel8[num8Chunks];
-    for (int i = 0; i < 8; ++i) {
+    for (size_t i = 0; i < 8; ++i) {
         const TriAccel* accel = &triaccel[num8Chunks * 8 + i];
 
         if (i < remainderTriangles) {

@@ -33,7 +33,7 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 	Rng rng(y * camera.getWidth() + x);
 	auto finalColor = Spectrum(0.0f);
     RayHitInfo isect;
-    static constexpr int maxIter = 4;
+    static constexpr int maxIter = 64;
     static const float invMaxIter = 1.0f / maxIter;
 	/*
 	 * This loop should be part of renderer task (concern). It only samples new
@@ -101,7 +101,7 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 			auto lightRay = Ray(intersection + wi * EPS, wi);
 			lightRay.maxT = length(intersection - sampledPosition) - eps;
 
-			if (!scene.intersectShadow(lightRay)) {
+			if (!scene.intersect8Shadow(lightRay)) {
 				Spectrum f = isect.bsdf->f(wo, wi);
 				color = color + (pathWeight * f * lightEmission
 					* (abs(dot(nl, wi)) / pdf) * (float)numLights);
