@@ -84,7 +84,7 @@ struct TVector3 {
 		return TVector3(x / rhs, y / rhs, z / rhs);
 	}
 
-	inline TVector3 operator+=(const TVector3& rhs)
+	inline TVector3& operator+=(const TVector3& rhs)
 	{
 		x += rhs.x;
 		y += rhs.y;
@@ -92,7 +92,7 @@ struct TVector3 {
 		return *this;
 	}
 
-	inline TVector3 operator-=(const TVector3& rhs)
+	inline TVector3& operator-=(const TVector3& rhs)
 	{
 		x -= rhs.x;
 		y -= rhs.y;

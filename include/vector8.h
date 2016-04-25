@@ -11,7 +11,7 @@ struct BoolVector8
 {
     union {
         __m256 ymm;
-        float scalar[8];
+        uint32_t scalar[8];
     };
 
     BoolVector8() = default;
@@ -57,7 +57,13 @@ struct BoolVector8
     FINLINE bool operator[](int idx) const
     {
         assert(idx >= 0 && idx <= 7);
-        return scalar[idx] != 0.0f;
+        return scalar[idx] != 0;
+    }
+
+    FINLINE void set(int idx, bool value)
+    {
+        assert(idx >= 0 && idx <= 7);
+        scalar[idx] = value ? 0xffffffff : 0x0;
     }
 };
 
