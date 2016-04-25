@@ -4,7 +4,7 @@ project(rt)
 if (UNIX)
 	# -fno-rtti - disables rtti
 	# -Werror - add when spectrum class is implemented
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -Werror -Wall -Wpedantic -std=c++1z -O3 -g")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -Werror -Wall -Wpedantic -std=c++1z -O3 -g -mavx")
     if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lpthread")
     endif()
@@ -51,7 +51,8 @@ set(INCLUDES
 	${INCL}/triaccel.h
 	${INCL}/triangle.h
 	${INCL}/utils.h
-	${INCL}/vector.h)
+	${INCL}/vector.h
+	${INCL}/vector8.h)
 
 set(SRCS
 	${SRC_DIR}/rt.cpp
