@@ -82,6 +82,48 @@ static FINLINE bool none(const BoolVector8& bvec)
     return bvec.none();
 }
 
+struct IntVector8
+{
+    union {
+        __m256i ymm;
+        int32_t scalar[8];
+    };
+
+     IntVector8() = default;
+
+     explicit IntVector8(int32_t val)
+         : ymm(_mm256_set1_epi32(val))
+     { }
+
+     explicit IntVector8(const int32_t* vals)
+         : ymm(_mm256_set_epi32(vals[0], vals[1], vals[2], vals[3], vals[4], vals[5], vals[6], vals[7]))
+     { }
+
+     explicit IntVector8(__m256i ymm)
+         : ymm(ymm)
+     { }
+
+     IntVector8(const IntVector8& copy) = default;
+
+     IntVector8& operator=(const IntVector8& copy) = default;
+
+     IntVector8(IntVector8&& move) = default;
+
+     IntVector8& operator=(IntVector8&& move) = default;
+
+     FINLINE int32_t operator[](int idx) const
+     {
+         assert(int >= 0 && int <= 7);
+         return scalar[idx];
+     }
+
+     FINLINE int32_t& operator[](int idx)
+     {
+         assert(int >= 0 && int <= 7);
+         return scalar[idx];
+     }
+};
+
 struct Vector8
 {
     /*

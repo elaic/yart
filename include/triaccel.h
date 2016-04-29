@@ -36,17 +36,17 @@ struct TriAccel8 {
     Vector8 n_u;
     Vector8 n_v;
     Vector8 n_d;
-	__m256i k;
+    IntVector8 k;
 
     Vector8 b_u;
     Vector8 b_v;
     Vector8 b_d;
-	__m256i triIdx;
+    IntVector8 triIdx;
 
     Vector8 c_u;
     Vector8 c_v;
     Vector8 c_d;
-	__m256i meshIdx;
+    IntVector8 meshIdx;
 
     BoolVector8 valid;
 };
@@ -125,17 +125,17 @@ inline void loadTriaccel8(
             accel8->n_u[j] = accel->n_u;
             accel8->n_v[j] = accel->n_v;
             accel8->n_d[j] = accel->n_d;
-            accel8->k.m256i_i32[j] = accel->k;
+            accel8->k[j] = accel->k;
 
             accel8->b_u[j] = accel->b_u;
             accel8->b_v[j] = accel->b_v;
             accel8->b_d[j] = accel->b_d;
-            accel8->triIdx.m256i_i32[j] = accel->triIdx;
+            accel8->triIdx[j] = accel->triIdx;
 
             accel8->c_u[j] = accel->c_u;
             accel8->c_v[j] = accel->c_v;
             accel8->c_d[j] = accel->c_d;
-            accel8->meshIdx.m256i_i32[j] = accel->meshIdx;
+            accel8->meshIdx[j] = accel->meshIdx;
             accel8->valid.set(j, true);
         }
     }
@@ -148,17 +148,17 @@ inline void loadTriaccel8(
             accel8->n_u[i] = accel->n_u;
             accel8->n_v[i] = accel->n_v;
             accel8->n_d[i] = accel->n_d;
-            accel8->k.m256i_i32[i] = accel->k;
+            accel8->k[i] = accel->k;
 
             accel8->b_u[i] = accel->b_u;
             accel8->b_v[i] = accel->b_v;
             accel8->b_d[i] = accel->b_d;
-            accel8->triIdx.m256i_i32[i] = accel->triIdx;
+            accel8->triIdx[i] = accel->triIdx;
 
             accel8->c_u[i] = accel->c_u;
             accel8->c_v[i] = accel->c_v;
             accel8->c_d[i] = accel->c_d;
-            accel8->meshIdx.m256i_i32[i] = accel->meshIdx;
+            accel8->meshIdx[i] = accel->meshIdx;
             accel8->valid.set(i, true);
         } else {
             accel8->valid.set(i, false);
@@ -221,7 +221,7 @@ FINLINE bool intersect(const TriAccel8& triaccel, const Ray& ray,
     // ray data in __m256 structures
     for (int i = 0; i < 8; ++i) {
         if (triaccel.valid[i]) {
-            auto k = triaccel.k.m256i_i32[i];
+            auto k = triaccel.k[i];
 #define ku modulo[k]
 #define kv modulo[k + 1]
             d_k[i] = ray.dir[k];
