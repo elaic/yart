@@ -54,15 +54,15 @@ struct BoolVector8
         return BoolVector8(_mm256_or_ps(ymm, rhs.ymm));
     }
 
-    FINLINE bool operator[](int idx) const
+    FINLINE bool operator[](size_t idx) const
     {
-        assert(idx >= 0 && idx <= 7);
+        assert(idx <= 7);
         return scalar[idx] != 0;
     }
 
-    FINLINE void set(int idx, bool value)
+    FINLINE void set(size_t idx, bool value)
     {
-        assert(idx >= 0 && idx <= 7);
+        assert(idx <= 7);
         scalar[idx] = value ? 0xffffffff : 0x0;
     }
 };
@@ -111,15 +111,15 @@ struct IntVector8
 
      IntVector8& operator=(IntVector8&& move) = default;
 
-     FINLINE int32_t operator[](int idx) const
+     FINLINE int32_t operator[](size_t idx) const
      {
-         assert(idx >= 0 && idx <= 7);
+         assert(idx <= 7);
          return scalar[idx];
      }
 
-     FINLINE int32_t& operator[](int idx)
+     FINLINE int32_t& operator[](size_t idx)
      {
-         assert(idx >= 0 && idx <= 7);
+         assert(idx <= 7);
          return scalar[idx];
      }
 };
@@ -236,15 +236,15 @@ struct Vector8
         return BoolVector8(_mm256_cmp_ps(ymm, rhs.ymm, _CMP_LT_OQ));
     }
 
-    FINLINE float& operator[](int idx)
+    FINLINE float& operator[](size_t idx)
     {
-        assert(idx >= 0 && idx <= 7);
+        assert(idx <= 7);
         return scalar[idx];
     }
 
-    FINLINE float operator[](int idx) const
+    FINLINE float operator[](size_t idx) const
     {
-        assert(idx >= 0 && idx <= 7);
+        assert(idx <= 7);
         return scalar[idx];
     }
 };
