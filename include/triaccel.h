@@ -240,7 +240,6 @@ FINLINE bool intersect(const TriAccel8& triaccel, const Ray& ray,
 
     auto zero = Vector8(0.0f);
     auto one = Vector8(1.0f);
-    auto minusone = Vector8(-1.0f);
     auto eps = Vector8(1e-4f);
 
     auto currT = Vector8(info->t);
