@@ -141,7 +141,7 @@ inline void loadTriaccel8(
     }
 
     TriAccel8* accel8 = &triaccel8[num8Chunks];
-    for (int i = 0; i < 8; ++i) {
+    for (size_t i = 0; i < 8; ++i) {
         const TriAccel* accel = &triaccel[num8Chunks * 8 + i];
 
         if (i < remainderTriangles) {
@@ -200,10 +200,12 @@ FINLINE bool intersect(const TriAccel& triaccel, const Ray& ray,
 #undef kv
 }
 
+#if defined(_WIN32)
 #pragma warning (push)
 // Supress potentially uninitialized local variable for ray data. They are only
 // uninitialized when data in triaccel8 is not valid
 #pragma warning (disable: 4701)
+#endif
 // Needs Ray8 adapter, to avoid loading the same values over and over again
 // https://software.intel.com/sites/landingpage/IntrinsicsGuide
 FINLINE bool intersect(const TriAccel8& triaccel, const Ray& ray,
@@ -296,6 +298,8 @@ FINLINE bool intersect(const TriAccel8& triaccel, const Ray& ray,
     }
     return true;
 }
+#if defined(_WIN32)
 #pragma warning (pop)
+#endif
 
 #endif // TRIACCEL_H

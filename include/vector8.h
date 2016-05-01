@@ -113,13 +113,13 @@ struct IntVector8
 
      FINLINE int32_t operator[](int idx) const
      {
-         assert(int >= 0 && int <= 7);
+         assert(idx >= 0 && idx <= 7);
          return scalar[idx];
      }
 
      FINLINE int32_t& operator[](int idx)
      {
-         assert(int >= 0 && int <= 7);
+         assert(idx >= 0 && idx <= 7);
          return scalar[idx];
      }
 };
