@@ -192,14 +192,14 @@ Scene Scene::loadFromObj(const std::string& folder, const std::string& file)
 	MeshList meshes;
 	for (const auto& shape : shapes) {
 		printf("%s\n", shape.name.c_str());
-		printf("\tNum triangles: %llu\n", shape.mesh.num_vertices.size());
-		printf("\tNum vertices:  %llu\n", shape.mesh.indices.size());
+		printf("\tNum triangles: %zu\n", shape.mesh.num_vertices.size());
+		printf("\tNum vertices:  %zu\n", shape.mesh.indices.size());
 		printf("\n");
 
 		VertexList vertices;
 		const auto& positions = shape.mesh.positions;
 		vertices.reserve(positions.size() / 3);
-		for (auto i = 0; i < positions.size() / 3; ++i)
+		for (size_t i = 0; i < positions.size() / 3; ++i)
 		{
 			vertices.push_back(Vector3f(
 				positions[3 * i],
@@ -211,7 +211,7 @@ Scene Scene::loadFromObj(const std::string& folder, const std::string& file)
 		TriangleList triangles;
 		const auto& indices = shape.mesh.indices;
 		triangles.reserve(indices.size() / 3);
-		for (auto i = 0; i < indices.size() / 3; ++i)
+		for (size_t i = 0; i < indices.size() / 3; ++i)
 		{
 			triangles.push_back(Triangle(
 				indices[3 * i],
