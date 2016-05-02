@@ -98,6 +98,8 @@ public:
             auto meshIdx = triaccel_[triIdx].meshIdx;
             auto triangleIdx = triaccel_[triIdx].triIdx;
             isect->normal = meshes_[meshIdx].getNormal(triangleIdx);
+            isect->shadingNormal =
+                meshes_[meshIdx].getShadingNormal(triangleIdx, isect->u, isect->v);
             isect->bsdf = meshes_[meshIdx].getBsdf();
             isect->areaLight = nullptr;
         }
@@ -149,6 +151,8 @@ public:
 			auto meshIdx = triaccel_[triIdx].meshIdx;
 			auto triangleIdx = triaccel_[triIdx].triIdx;
 			isect->normal = meshes_[meshIdx].getNormal(triangleIdx);
+            isect->shadingNormal =
+                meshes_[meshIdx].getShadingNormal(triangleIdx, isect->u, isect->v);
 			isect->bsdf = meshes_[meshIdx].getBsdf();
             isect->areaLight = nullptr;
 		}

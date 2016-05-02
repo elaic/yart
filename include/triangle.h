@@ -2,6 +2,8 @@
 #define TRIANGLE_H
 
 #include <cstdint>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "platform.h"
@@ -45,7 +47,7 @@ FINLINE bool intersect(const Ray& ray, const Triangle& triangle,
     const auto& pvec = cross(ray.dir, e2);
     const auto det = dot(e1, pvec);
 
-    if (det > -EPS && det < EPS) // TODO: put it in a const
+    if (det > -EPS && det < EPS)
         return false;
 
     const auto invDet = 1.0f / det;
@@ -76,7 +78,28 @@ public:
         : vertices_(vertices)
         , triangles_(triangles)
         , bsdf_(bsdf)
-    { }
+    {
+        std::unordered_map<int32_t, std::unordered_set<int32_t>> vertexTriangleMap;
+
+        for (size_t i = 0; i < triangles.size(); ++i) {
+            vertexTriangleMap[triangles_[i].idx0].emplace((int32_t)i);
+            vertexTriangleMap[triangles_[i].idx1].emplace((int32_t)i);
+            vertexTriangleMap[triangles_[i].idx2].emplace((int32_t)i);
+        }
+
+        assert(vertices_.size() >= vertexTriangleMap.size());
+        normals_.reserve(vertices_.size());
+
+        for (size_t i = 0; i < vertexTriangleMap.size(); ++i) {
+            auto normal = Vector3f(0);
+
+            for (const auto& triIdx : vertexTriangleMap[(int32_t)i]) {
+                normal += getNormal(triIdx);
+            }
+
+            normals_.push_back(normal / (float)vertexTriangleMap[(int32_t)i].size());
+        }
+    }
 
     inline bool intersect(const Ray& ray, RayHitInfo* const hitInfo) const
     {
@@ -108,6 +131,14 @@ public:
 		return normal(cross(e1, e2));
 	}
 
+    Vector3f getShadingNormal(int32_t triangleIdx, float u, float v) const
+    {
+        return
+            (normals_[triangles_[triangleIdx].idx0] * (1.0f - u - v) +
+            normals_[triangles_[triangleIdx].idx1] * v +
+            normals_[triangles_[triangleIdx].idx2] * u);
+    }
+
 	inline int32_t triangleCount() const
 	{
 		return static_cast<int32_t>(triangles_.size());
@@ -131,6 +162,7 @@ public:
 private:
 
     std::vector<Vector3f> vertices_;
+    std::vector<Vector3f> normals_;
     std::vector<Triangle> triangles_;
     std::shared_ptr<Bsdf> bsdf_;
 };

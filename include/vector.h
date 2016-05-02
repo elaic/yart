@@ -253,8 +253,9 @@ class AreaLight;
 
 class Bsdf;
 struct RayHitInfo {
+    Vector3f normal;
 	float t;
-	Vector3f normal;
+    Vector3f shadingNormal;
 	float u;
 	float v;
 	Bsdf* bsdf;

@@ -33,7 +33,7 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 	Rng rng(y * camera.getWidth() + x);
 	auto finalColor = Spectrum(0.0f);
     RayHitInfo isect;
-    static constexpr int maxIter = 2;
+    static constexpr int maxIter = 64;
     static const float invMaxIter = 1.0f / maxIter;
 	/*
 	 * This loop should be part of renderer task (concern). It only samples new
@@ -72,10 +72,10 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 			 * wo - outgoing direction
 			 */
 			Vector3f intersection = currentRay.orig + (currentRay.dir * isect.t);
-			Vector3f norm = isect.normal;
-			Vector3f nl = dot(norm, currentRay.dir) < 0.0f ? norm : norm * -1.0f;
+            auto norm = isect.shadingNormal;
+			Vector3f nl = dot(isect.normal, currentRay.dir) < 0.0f ? norm : norm * -1.0f;
 
-			auto hitFrame = Frame(norm);
+			auto hitFrame = Frame(nl);
 			const auto wo = hitFrame.toLocal(-currentRay.dir);
 
 			/*

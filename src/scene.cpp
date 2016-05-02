@@ -240,6 +240,10 @@ Scene Scene::loadFromObj(const std::string& folder, const std::string& file)
 			shps[shps.size() - 1],
 			Spectrum(1.0f, 1.0f, 1.0f)
 		),
+        //std::make_shared<PointLight>(
+        //    Vector3f(0.0f, 1.0f, 0.0f),
+        //    Spectrum(1.0f, 1.0f, 1.0f)
+        //),
 	};
 	shps[shps.size() - 1]->setLight((AreaLight*)lights[lights.size() - 1].get());
 	return Scene(meshes, shps, lights);

@@ -206,7 +206,6 @@ FINLINE bool intersect(const TriAccel& triaccel, const Ray& ray,
 // uninitialized when data in triaccel8 is not valid
 #pragma warning (disable: 4701)
 #endif
-// Needs Ray8 adapter, to avoid loading the same values over and over again
 // https://software.intel.com/sites/landingpage/IntrinsicsGuide
 FINLINE bool intersect(const TriAccel8& triaccel, const Ray& ray,
     RayHitInfo* const info, int* chunk8Idx)
