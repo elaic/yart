@@ -97,9 +97,19 @@ public:
                 normal += getNormal(triIdx);
             }
 
-            normals_.push_back(normal / (float)vertexTriangleMap[(int32_t)i].size());
+            normals_.push_back(::normal(normal));
         }
     }
+
+    TriangleMesh(const std::vector<Vector3f>& vertices,
+        const std::vector<Vector3f>& normals,
+        const std::vector<Triangle>& triangles,
+        const std::shared_ptr<Bsdf> bsdf)
+        : vertices_(vertices)
+        , normals_(normals)
+        , triangles_(triangles)
+        , bsdf_(bsdf)
+    { }
 
     inline bool intersect(const Ray& ray, RayHitInfo* const hitInfo) const
     {
