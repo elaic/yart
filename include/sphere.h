@@ -78,6 +78,7 @@ public:
 		if (t > EPS_S && t < hitInfo->t) {
 			hitInfo->t = static_cast<float>(t);
 			hitInfo->normal = normal(ray.orig + ray.dir * hitInfo->t - position_);
+            hitInfo->shadingNormal = hitInfo->normal;
 			hitInfo->bsdf = bsdf_.get();
 			hitInfo->areaLight = getLight();
 			return true;
@@ -86,6 +87,7 @@ public:
 			if (t > EPS_S && t < hitInfo->t) {
 				hitInfo->t = static_cast<float>(t);
 				hitInfo->normal = normal(ray.orig + ray.dir * hitInfo->t - position_);
+                hitInfo->shadingNormal = hitInfo->normal;
 				hitInfo->bsdf = bsdf_.get();
 				hitInfo->areaLight = getLight();
 				return true;
