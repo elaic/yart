@@ -180,13 +180,36 @@ Scene Scene::loadFromObj(const std::string& folder, const std::string& file)
 			);
 		printf("\n");
 
-		bsdfs.push_back(std::make_shared<Lambertian>(
-			Spectrum(material.diffuse[0], material.diffuse[1], material.diffuse[2]))
-		);
+        switch (material.illum)
+        {
+        case 2:
+            bsdfs.push_back(std::make_shared<Lambertian>(
+                Spectrum(material.diffuse[0], material.diffuse[1], material.diffuse[2]))
+            );
+            break;
+
+        case 5:
+            bsdfs.push_back(std::make_shared<TorranceSparrowConductor>(
+                Spectrum(0.999f, 0.999f, 0.999f),
+                Spectrum(0.16f, 0.55f, 1.75f),
+                Spectrum(4.6f, 2.2f, 1.9f),
+                material.shininess));
+            break;
+
+        case 7:
+            bsdfs.push_back(std::make_shared<FresnelDielectric>(
+                Spectrum(0.999f, 0.999f, 0.999f), material.ior));
+            break;
+
+        default:
+            bsdfs.push_back(std::make_shared<Lambertian>(Spectrum(0.0f)));
+            break;
+        }
 	}
 
 	using MeshList = std::vector<TriangleMesh>;
 	using VertexList = std::vector<Vector3f>;
+    using NormalList = std::vector<Vector3f>;
 	using TriangleList = std::vector<Triangle>;
 
 	MeshList meshes;
@@ -194,13 +217,13 @@ Scene Scene::loadFromObj(const std::string& folder, const std::string& file)
 		printf("%s\n", shape.name.c_str());
 		printf("\tNum triangles: %zu\n", shape.mesh.num_vertices.size());
 		printf("\tNum vertices:  %zu\n", shape.mesh.indices.size());
-		printf("\n");
+
+        bool loadedNormals = false;
 
 		VertexList vertices;
 		const auto& positions = shape.mesh.positions;
 		vertices.reserve(positions.size() / 3);
-		for (size_t i = 0; i < positions.size() / 3; ++i)
-		{
+		for (size_t i = 0; i < positions.size() / 3; ++i) {
 			vertices.push_back(Vector3f(
 				positions[3 * i],
 				positions[3 * i + 1],
@@ -208,11 +231,26 @@ Scene Scene::loadFromObj(const std::string& folder, const std::string& file)
 			));
 		}
 
+        NormalList normals;
+        const auto& nnormals = shape.mesh.normals;
+        normals.reserve(normals.size() / 3);
+
+        if (positions.size() == nnormals.size()) {
+            printf("\tLoading normals from file\n");
+            loadedNormals = true;
+            for (size_t i = 0; i < nnormals.size() / 3; ++i) {
+                normals.push_back(Vector3f(
+                    nnormals[3 * i],
+                    nnormals[3 * i + 1],
+                    nnormals[3 * i + 2]
+                ));
+            }
+        }
+
 		TriangleList triangles;
 		const auto& indices = shape.mesh.indices;
 		triangles.reserve(indices.size() / 3);
-		for (size_t i = 0; i < indices.size() / 3; ++i)
-		{
+		for (size_t i = 0; i < indices.size() / 3; ++i) {
 			triangles.push_back(Triangle(
 				indices[3 * i],
 				indices[3 * i + 1],
@@ -221,11 +259,21 @@ Scene Scene::loadFromObj(const std::string& folder, const std::string& file)
 		}
 
 		auto matIdx = shape.mesh.material_ids[0];
-		meshes.push_back(TriangleMesh(
-			vertices,
-			triangles,
-			bsdfs[matIdx]
-		));
+        if (!loadedNormals) {
+            meshes.push_back(TriangleMesh(
+                vertices,
+                triangles,
+                bsdfs[matIdx]
+            ));
+        } else {
+            meshes.push_back(TriangleMesh(
+                vertices,
+                normals,
+                triangles,
+                bsdfs[matIdx]
+            ));
+        }
+        printf("\n");
 	}
 
 	using ShapeList = std::vector<std::shared_ptr<Shape>>;
