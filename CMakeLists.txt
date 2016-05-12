@@ -1,10 +1,65 @@
 cmake_minimum_required(VERSION 3.0)
 project(rt)
 
+# This is ugly...
+# Determine AVX support. If no AVX support found, fail with fatal error
+try_run(
+    AVX_SUPPORT CPUID_COMPILE_RESULT
+    ${CMAKE_BINARY_DIR}
+    ${PROJECT_SOURCE_DIR}/cmake/cpuid.c
+    CMAKE_FLAGS "-DCMAKE_C_FLAGS:STRING=-std=c11")
+
+set(CXX_AVX_DEFINE_FLAGS "")
+set(CXX_AVX_COMPILER_FLAGS "")
+
+if (${AVX_SUPPORT} EQUAL 1)
+    message(STATUS "AVX support detected")
+    if (UNIX)
+        set(CXX_AVX_COMPILER_FLAGS " -mavx")
+        set(CXX_AVX_DEFINE_FLAGS " -DYART_AVX")
+    elseif (MSVC)
+        set(CXX_AVX_COMPILER_FLAGS " /arch:AVX")
+        set(CXX_AVX_DEFINE_FLAGS " /DYART_AVX")
+    endif()
+elseif(${AVX_SUPPORT} EQUAL 2)
+    message(STATUS "AVX2 support detected")
+    if (UNIX)
+        set(CXX_AVX_COMPILER_FLAGS " -mavx -mavx2")
+        set(CXX_AVX_DEFINE_FLAGS " -DYART_AVX -DYART_AVX2")
+    elseif (MSVC)
+        set(CXX_AVX_COMPILER_FLAGS " /arch:AVX2")
+        set(CXX_AVX_DEFINE_FLAGS " /DYART_AVX /DYART_AVX2")
+    endif()
+elseif (${AVX_SUPPORT} EQUAL 3)
+    message(STATUS "AVX support with FMA detected")
+    if (UNIX)
+        set(CXX_AVX_COMPILER_FLAGS " -mavx -mfma")
+        set(CXX_AVX_DEFINE_FLAGS " -DYART_AVX -DYART_FMA")
+    elseif (MSVC)
+        set(CXX_AVX_COMPILER_FLAGS " /arch:AVX")
+        set(CXX_AVX_DEFINE_FLAGS " /DYART_AVX /DYART_FMA")
+    endif()
+elseif (${AVX_SUPPORT} EQUAL 4)
+    message(STATUS "AVX2 support with FMA detected")
+    if (UNIX)
+        set(CXX_AVX_COMPILER_FLAGS " -mavx -mavx2 -fma")
+        set(CXX_AVX_DEFINE_FLAGS " -DYART_AVX -DYART_AVX2 -DYART_FMA")
+    elseif (MSVC)
+        set(CXX_AVX_COMPILER_FLAGS " /arch:AVX2")
+        set(CXX_AVX_DEFINE_FLAGS " /DYART_AVX /DYART_AVX2 /DYART_FMA")
+    endif()
+else()
+    message(FATAL_ERROR "No AVX support detected, fatal error.")
+endif()
+
 if (UNIX)
 	# -fno-rtti - disables rtti
 	# -Werror - add when spectrum class is implemented
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -Werror -Wall -Wpedantic -std=c++1z -O3 -g -mavx2 -mfma")
+    set(CMAKE_CXX_FLAGS
+        "${CMAKE_CXX_FLAGS} -fno-rtti -Werror -Wall -Wpedantic \
+        -std=c++1z -O3 -DNDEBUG -g \
+        ${CXX_AVX_DEFINE_FLAGS} \
+        ${CXX_AVX_COMPILER_FLAGS}")
     if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lpthread")
     endif()
@@ -12,7 +67,9 @@ elseif (MSVC)
 	# /GR- - disables rtti
 	# /sdl - additional checks, add when spectrum class is implemented
 	# /Wx - treat warnings as errors, same as above
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /W4 /sdl /WX /arch:AVX2")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR- /W4 /sdl /WX \
+    ${CXX_AVX_DEFINE_FLAGS} \
+    ${CXX_AVX_COMPILER_FLAGS}")
 else()
 	message(FATAL_ERROR "Unsupported system")
 endif()

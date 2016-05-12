@@ -251,12 +251,20 @@ struct Vector8
 
 static FINLINE Vector8 fmadd(const Vector8& mulLhs, const Vector8& mulRhs, const Vector8& add)
 {
+#if defined(YART_FMA)
     return Vector8(_mm256_fmadd_ps(mulLhs.ymm, mulRhs.ymm, add.ymm));
+#else
+    return mulLhs * mulRhs + add;
+#endif
 }
 
 static FINLINE Vector8 fmsub(const Vector8& mulLhs, const Vector8& mulRhs, const Vector8& sub)
 {
+#if defined(YART_FMA)
     return Vector8(_mm256_fmsub_ps(mulLhs.ymm, mulRhs.ymm, sub.ymm));
+#else
+    return mulLhs * mulRhs - sub;
+#endif
 }
 
 #endif // VECTOR8_H
