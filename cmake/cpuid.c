@@ -2,14 +2,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-static const uint32_t AVX_SHIFT = 28;
-static const uint32_t AVX_BIT = 1 << AVX_SHIFT;
+#define AVX_SHIFT 28
+#define AVX_BIT (1 << AVX_SHIFT)
 
-static const uint32_t FMA_SHIFT = 12;
-static const uint32_t FMA_BIT = 1 << FMA_SHIFT;
+#define FMA_SHIFT 12
+#define FMA_BIT (1 << FMA_SHIFT)
 
-static const uint32_t AVX2_SHIFT = 5;
-static const uint32_t AVX2_BIT = 1 << AVX2_SHIFT;
+#define AVX2_SHIFT 5
+#define AVX2_BIT (1 << AVX2_SHIFT)
 
 static const int32_t CPUID_PROC_INFO = 0x1;
 static const int32_t CPUID_EXTENDED_FEATURES = 0x7;
