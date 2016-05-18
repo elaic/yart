@@ -96,6 +96,7 @@ set(INCL ${PROJECT_SOURCE_DIR}/include)
 set(SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 
 set(INCLUDES
+	${INCL}/bbox.h
 	${INCL}/bitmap.h
 	${INCL}/bsdf.h
 	${INCL}/camera.h
