@@ -8,6 +8,7 @@
 
 #include "platform.h"
 
+#include "bbox.h"
 #include "bsdf.h"
 #include "utils.h"
 #include "vector.h"
@@ -99,6 +100,14 @@ public:
 
             normals_.push_back(::normal(normal));
         }
+
+        if (vertices_.size() > 0)
+        {
+            bounds_ = BBox(vertices_[0]);
+            for (const auto& v : vertices_) {
+                bounds_ = boxUnion(bounds_, v);
+            }
+        }
     }
 
     TriangleMesh(const std::vector<Vector3f>& vertices,
@@ -109,13 +118,24 @@ public:
         , normals_(normals)
         , triangles_(triangles)
         , bsdf_(bsdf)
-    { }
+    {
+        if (vertices_.size() > 0)
+        {
+            bounds_ = BBox(vertices_[0]);
+            for (const auto& v : vertices_) {
+                bounds_ = boxUnion(bounds_, v);
+            }
+        }
+    }
 
     inline bool intersect(const Ray& ray, RayHitInfo* const hitInfo) const
     {
         RayHitInfo localHitInfo;
-        auto currentT = std::numeric_limits<float>::max();
+        auto currentT = hitInfo->t;
         auto hitId = -1;
+
+        if (!bounds_.intersect(ray)) return false;
+
         for (tri_size_t i = 0; i < triangles_.size(); ++i) {
             if (::intersect(ray, triangles_[i], vertices_, &localHitInfo) &&
                 localHitInfo.t < currentT && localHitInfo.t > 0.0f) {
@@ -129,8 +149,10 @@ public:
         if (hitId >= 0) {
             hitInfo->normal = getNormal(hitId);
             hitInfo->bsdf = bsdf_.get();
+            hitInfo->shadingNormal = getShadingNormal(hitId, hitInfo->u, hitInfo->v);
+            hitInfo->areaLight = nullptr;
         }
-        return currentT < std::numeric_limits<float>::max() && currentT > 0.0f;
+        return currentT < ray.maxT && currentT > 0.0f;
     }
 
 	inline Vector3f getNormal(int32_t triangleIdx) const
@@ -175,6 +197,7 @@ private:
     std::vector<Vector3f> normals_;
     std::vector<Triangle> triangles_;
     std::shared_ptr<Bsdf> bsdf_;
+    BBox bounds_;
 };
 
 #endif // TRIANGLE_H
