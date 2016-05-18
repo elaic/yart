@@ -181,6 +181,42 @@ public:
 		return false;
 	}
 
+    bool intersectBounds(const Ray& ray, RayHitInfo* const isect) const
+    {
+        isect->t = ray.maxT;
+        isect->areaLight = nullptr;
+
+        for (const auto& shape : shapes_) {
+            shape->intersect(ray, isect);
+        }
+
+        for (const auto& mesh : meshes_) {
+            mesh.intersect(ray, isect);
+        }
+
+        return isect->t < ray.maxT;
+    }
+
+    bool intersectShadowBounds(const Ray& ray) const
+    {
+        RayHitInfo isect;
+        isect.t = ray.maxT;
+
+        for (const auto& shape : shapes_) {
+            if (shape->intersect(ray, &isect)) {
+                return true;
+            }
+        }
+
+        for (const auto& mesh : meshes_) {
+            if (mesh.intersect(ray, &isect)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 	const std::vector<std::shared_ptr<Light>>& getLights() const
 	{
 		return lights_;
