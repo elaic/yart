@@ -192,8 +192,8 @@ FINLINE bool intersect(const TriAccel& triaccel, const Ray& ray,
 	if (lambda + mue > 1.0f) return false;
 
 	info->t = t;
-	info->u = lambda;
-	info->v = mue;
+	info->v = lambda;
+	info->u = mue;
 	return true;
 
 #undef ku
@@ -285,8 +285,8 @@ FINLINE bool intersect(const TriAccel8& triaccel, const Ray& ray,
         if (valid[i]) {
             if (t[i] < info->t) {
                 info->t = t[i];
-                info->u = lambda[i];
-                info->v = mue[i];
+                info->v = lambda[i];
+                info->u = mue[i];
                 assert(info->u >= 0.0f);
                 assert(info->v >= 0.0f);
                 assert(info->u + info->v <= 1.0f);

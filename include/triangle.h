@@ -167,8 +167,8 @@ public:
     {
         return
             (normals_[triangles_[triangleIdx].idx0] * (1.0f - u - v) +
-            normals_[triangles_[triangleIdx].idx1] * v +
-            normals_[triangles_[triangleIdx].idx2] * u);
+            normals_[triangles_[triangleIdx].idx1] * u +
+            normals_[triangles_[triangleIdx].idx2] * v);
     }
 
 	inline int32_t triangleCount() const
