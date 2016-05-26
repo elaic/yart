@@ -165,10 +165,9 @@ public:
 
     Vector3f getShadingNormal(int32_t triangleIdx, float u, float v) const
     {
-        return
-            (normals_[triangles_[triangleIdx].idx0] * (1.0f - u - v) +
-            normals_[triangles_[triangleIdx].idx1] * u +
-            normals_[triangles_[triangleIdx].idx2] * v);
+        return (normals_[triangles_[triangleIdx].idx0] * (1.0f - u - v) +
+                normals_[triangles_[triangleIdx].idx1] * u +
+                normals_[triangles_[triangleIdx].idx2] * v);
     }
 
 	inline int32_t triangleCount() const

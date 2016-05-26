@@ -99,6 +99,7 @@ set(INCLUDES
 	${INCL}/bbox.h
 	${INCL}/bitmap.h
 	${INCL}/bsdf.h
+	${INCL}/bvhaccel.h
 	${INCL}/camera.h
 	${INCL}/constants.h
 	${INCL}/frame.h
@@ -125,6 +126,7 @@ set(SRCS
 	${SRC_DIR}/rt.cpp
 	${SRC_DIR}/bitmap.cpp
 	${SRC_DIR}/bsdf.cpp
+	${SRC_DIR}/bvhaccel.cpp
 	${SRC_DIR}/renderer.cpp
 	${SRC_DIR}/scene.cpp
 	${SRC_DIR}/scheduler.cpp)

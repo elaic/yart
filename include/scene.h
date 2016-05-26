@@ -222,6 +222,11 @@ public:
 		return lights_;
 	}
 
+    const std::vector<TriangleMesh>& getTriangleMeshes() const
+    {
+        return meshes_;
+    }
+
 	static Scene makeCornellBox();
 	static Scene loadFromObj(const std::string& folder, const std::string& file);
 

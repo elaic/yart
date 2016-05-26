@@ -15,7 +15,7 @@ struct BBox {
 
     BBox(BBox&& move) = default;
 
-    explicit BBox(Vector3f& point) : min(point), max(point) { };
+    explicit BBox(const Vector3f& point) : min(point), max(point) { };
 
     BBox& operator=(const BBox& copy) = default;
 
