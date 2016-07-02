@@ -2,6 +2,7 @@
 #define BBOX_H
 
 #include <algorithm>
+#include <limits>
 
 #include "vector.h"
 
@@ -9,7 +10,10 @@ struct BBox {
     Vector3f min;
     Vector3f max;
 
-    BBox() = default;
+    BBox()
+        : min(std::numeric_limits<float>::infinity())
+        , max(-std::numeric_limits<float>::infinity())
+    { }
 
     BBox(const BBox& copy) = default;
 
@@ -44,7 +48,24 @@ struct BBox {
         if (tfar) *tfar = tFar;
         return true;
     }
+
+    uint8_t maxExtent() const
+    {
+        Vector3f diff = max - min;
+
+        if (diff.x > diff.y && diff.x > diff.z) {
+            return 0;
+        } else if (diff.y > diff.z) {
+            return 1;
+        }
+        return 2;
+    }
 };
+
+FINLINE uint8_t maxExtent(const BBox& bbox)
+{
+    return bbox.maxExtent();
+}
 
 inline BBox boxUnion(const BBox& box, const Vector3f point)
 {

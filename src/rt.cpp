@@ -28,7 +28,7 @@ int main(int /*argc*/, const char* /*argv*/[])
 	);
 	scene.preprocess();
 #else
-	auto scene = Scene::loadFromObj("D:\\users\\marcin\\projects\\yart\\scenes\\cornell-box\\", "CornellBox-Sphere.obj");
+	auto scene = Scene::loadFromObj("D:\\users\\marcin\\projects\\yart\\scenes\\cornell-box\\", "CornellBox-Glossy.obj");
     scene.preprocess();
 	auto camera = Camera(
 		Vector3f(0.0f, 0.85f, 3.0f),

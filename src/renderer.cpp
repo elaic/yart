@@ -33,7 +33,7 @@ FINLINE void trace(const Scene& scene, Camera& camera, int32_t x, int32_t y)
 	Rng rng(y * camera.getWidth() + x);
 	auto finalColor = Spectrum(0.0f);
     RayHitInfo isect;
-    static constexpr int maxIter = 16;
+    static constexpr int maxIter = 1024;
     static const float invMaxIter = 1.0f / maxIter;
 	/*
 	 * This loop should be part of renderer task (concern). It only samples new
