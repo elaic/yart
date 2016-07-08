@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "bbox.h"
+#include "scene.h"
 
 namespace {
 
@@ -83,13 +84,24 @@ std::unique_ptr<BvhNode> buildRecursive(
     }
 
     SplitAxis axis = (SplitAxis)maxExtent(bbox);
-    auto midpoint = (bbox.max[axis] - bbox.min[axis]) / 2 + bbox.min[axis];
+    auto midpoint = (bbox.max[axis] + bbox.min[axis]) * 0.5;
     auto middle = std::partition(
         begin,
         end,
         [midpoint, axis](const BvhBoundsInfo& bvhBounds) {
         return bvhBounds.center[axis] < midpoint;
     });
+
+    if (middle == begin || middle == end) {
+        middle = begin + numTriangles / 2;
+        std::nth_element(
+            begin,
+            middle,
+            end,
+            [axis](const BvhBoundsInfo& lhs, const BvhBoundsInfo& rhs) {
+                return lhs.center[axis] < rhs.center[axis];
+            });
+    }
 
     // Create a interior node
     return std::make_unique<BvhNode>(
@@ -99,7 +111,9 @@ std::unique_ptr<BvhNode> buildRecursive(
         buildRecursive(middle, end, triangles));
 }
 
-bool traverse(const BvhNode* node, const Ray& ray, const TriAccel* triangles)
+template <bool shadow>
+bool traverse(const BvhNode* node, const Ray& ray, const TriAccel* triangles,
+    const std::vector<TriangleMesh>& meshes, RayHitInfo* const isect)
 {
     // Fast ray rejection
     if (!node->bounds.intersect(ray))
@@ -112,22 +126,46 @@ bool traverse(const BvhNode* node, const Ray& ray, const TriAccel* triangles)
         auto firstNode = node->childNodes[0].get();
         auto secondNode = node->childNodes[1].get();
 
-        if (!leftFirst) {
+        auto axis = node->splitAxis;
+        leftFirst = ray.dir[axis] < 0;
+
+        if (leftFirst) {
             firstNode = node->childNodes[1].get();
             secondNode = node->childNodes[0].get();
         }
-        if (traverse(firstNode, ray, triangles))
-            return true;
 
-        return traverse(secondNode, ray, triangles);
+        auto hitLeft = traverse<shadow>(firstNode, ray, triangles, meshes, isect);
+        auto hitRight = traverse<shadow>(secondNode, ray, triangles, meshes, isect);
+
+        return hitLeft || hitRight;
     }
 
-    // We are in leaf node, check
-    RayHitInfo isect;
-    isect.t = ray.maxT;
-    for (size_t i = 0; i < node->numTriangles; ++i) {
-        size_t tri = node->triangleStartOffset + i;
-        if (intersect(triangles[tri], ray, &isect)) {
+    // We are in leaf node
+    if (shadow) {
+        for (size_t i = 0; i < node->numTriangles; ++i) {
+            size_t tri = node->triangleStartOffset + i;
+            if (intersect(triangles[tri], ray, isect)) {
+                return true;
+            }
+        }
+    } else {
+        int triIdx = -1;
+        for (size_t i = 0; i < node->numTriangles; ++i) {
+            size_t tri = node->triangleStartOffset + i;
+            if (intersect(triangles[tri], ray, isect)) {
+                // found closest intersection
+                triIdx = (int)tri;
+            }
+        }
+
+        if (triIdx > -1) {
+            auto meshIdx = triangles[triIdx].meshIdx;
+            auto triangleIdx = triangles[triIdx].triIdx;
+            isect->normal = meshes[meshIdx].getNormal(triangleIdx);
+            isect->shadingNormal =
+                meshes[meshIdx].getShadingNormal(triangleIdx, isect->u, isect->v);
+            isect->bsdf = meshes[meshIdx].getBsdf();
+            isect->areaLight = nullptr;
             return true;
         }
     }
@@ -138,7 +176,10 @@ bool traverse(const BvhNode* node, const Ray& ray, const TriAccel* triangles)
 } // anonymous namespace
 
 BvhAccel::BvhAccel(const Scene& scene)
+    : scene_(scene)
 {
+    using std::get;
+
     // Fill in the vector with triangle bounding box data
     std::vector<BvhBoundsInfo> buildData;
 
@@ -177,6 +218,32 @@ BvhAccel::BvhAccel(const Scene& scene)
     std::vector<MeshTrianglePair> triangles;
     triangles.reserve(numTriangles);
 
-    auto root = buildRecursive(buildData.begin(), buildData.end(), triangles);
+    root_ = buildRecursive(buildData.begin(), buildData.end(), triangles);
+
+    triangles_ = alignedAlloc<TriAccel>(numTriangles, 16);
+    for (size_t i = 0; i < numTriangles; ++i) {
+        MeshTrianglePair tri = triangles[i];
+        const auto& m = scene.getTriangleMeshes()[get<0>(tri)];
+        const auto& t = m.getTriangles()[get<1>(tri)];
+        project(&triangles_[i], t, m.getVertices(), (int32_t)get<1>(tri), (int32_t)get<0>(tri));
+    }
+}
+
+BvhAccel::~BvhAccel()
+{
+    alignedFree(triangles_);
+}
+
+bool BvhAccel::intersect(const Ray& ray, RayHitInfo* const isect) const
+{
+    return traverse<false>(root_.get(), ray, triangles_, scene_.getTriangleMeshes(), isect);
+}
+
+bool BvhAccel::intersectShadow(const Ray& ray) const
+{
+    RayHitInfo isect;
+    isect.t = ray.maxT;
+
+    return traverse<true>(root_.get(), ray, triangles_, scene_.getTriangleMeshes(), &isect);
 }
 

@@ -6,6 +6,7 @@
 #include "platform.h"
 #include "vector.h"
 
+#include "bvhaccel.h"
 #include "light.h"
 #include "sphere.h"
 #include "triaccel.h"
@@ -68,6 +69,8 @@ public:
 		}
 
         loadTriaccel8(triaccel8_, triaccel_, triangleCount_);
+
+        accel_ = std::make_shared<BvhAccel>(*this);
 	}
 
     bool intersect8(const Ray& ray, RayHitInfo* const isect) const
@@ -140,6 +143,9 @@ public:
 			shape->intersect(ray, isect);
 		}
 
+        accel_->intersect(ray, isect);
+
+        /*
 		auto triIdx = -1;
 		for (auto i = 0; i < (int)triangleCount_; ++i) {
 			if (intersect(triaccel_[i], ray, isect)) {
@@ -156,6 +162,7 @@ public:
 			isect->bsdf = meshes_[meshIdx].getBsdf();
             isect->areaLight = nullptr;
 		}
+        */
 
 		return isect->t < ray.maxT;
 	}
@@ -172,11 +179,16 @@ public:
 			}
 		}
 
+        if (accel_->intersectShadow(ray)) {
+            return true;
+        }
+        /*
 		for (size_t i = 0; i < triangleCount_; ++i) {
 			if (intersect(triaccel_[i], ray, &hitInfo)) {
 				return true;
 			}
 		}
+        */
 
 		return false;
 	}
@@ -244,6 +256,8 @@ private:
 
     TriAccel8* triaccel8_;
     size_t triaccel8Count_;
+
+    std::shared_ptr<BvhAccel> accel_;
 };
 
 #endif // SCENE_H

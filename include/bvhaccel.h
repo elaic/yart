@@ -1,8 +1,12 @@
 #if !defined(BVHACCEL_H)
 #define BVHACCEL_H
 
+#include <memory>
+
+#include "triaccel.h"
 #include "vector.h"
-#include "scene.h"
+
+class Scene;
 
 // BVH with binary splits. Algorithm work flow:
 // 1. Compute bounds of each triangle in each mesh. Store mesh id and triangle
@@ -22,9 +26,16 @@
 //    benefit
 // 2. Instead of doing 2 way splitting, use vector width way splitting (8 for
 //    avx), so that BHV node test can also be done in a vectorized way.
+
+namespace {
+struct BvhNode;
+}
+
 class BvhAccel {
 public:
     BvhAccel(const Scene& scene);
+
+    ~BvhAccel();
 
     // Copying is expensive and makes little sense. Delete for now.
     BvhAccel(const BvhAccel& copy) = delete;
@@ -38,7 +49,14 @@ public:
     // Moving should be fine. Leave as default for now.
     BvhAccel& operator=(BvhAccel&& move) = default;
 
+    bool intersect(const Ray& ray, RayHitInfo* const isect) const;
+
+    bool intersectShadow(const Ray& ray) const;
+
 private:
+    std::unique_ptr<BvhNode> root_;
+    TriAccel* triangles_;
+    const Scene& scene_;
 };
 
 #endif // BVHACCEL_H
