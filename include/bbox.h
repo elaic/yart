@@ -46,7 +46,7 @@ struct BBox {
 
         if (tnear) *tnear = tNear;
         if (tfar) *tfar = tFar;
-        return true;
+        return tFar > ray.minT && tNear < ray.maxT;
     }
 
     uint8_t maxExtent() const
