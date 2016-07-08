@@ -27,10 +27,6 @@ class Scene;
 // 2. Instead of doing 2 way splitting, use vector width way splitting (8 for
 //    avx), so that BHV node test can also be done in a vectorized way.
 
-namespace {
-struct BvhNode;
-}
-
 class BvhAccel {
 public:
     BvhAccel(const Scene& scene);
@@ -53,7 +49,11 @@ public:
 
     bool intersectShadow(const Ray& ray) const;
 
+public:
+    struct BvhNode;
+
 private:
+
     std::unique_ptr<BvhNode> root_;
     TriAccel* triangles_;
     const Scene& scene_;

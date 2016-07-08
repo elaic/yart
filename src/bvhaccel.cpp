@@ -5,10 +5,15 @@
 #include "bbox.h"
 #include "scene.h"
 
+// types, constants and typedefs internal to the file
 namespace {
 
-// Set to 8 which is the width of AVX intructions
-static const int32_t minTrianglesInNode = 8;
+enum SplitAxis : uint8_t {
+    X = 0,
+    Y = 1,
+    Z = 2,
+    None,
+};
 
 struct BvhBoundsInfo {
     // Maybe this should be const?
@@ -24,14 +29,15 @@ struct BvhBoundsInfo {
     }
 };
 
-enum SplitAxis : uint8_t {
-    X = 0,
-    Y = 1,
-    Z = 2,
-    None,
-};
+// Set to 8 which is the width of AVX intructions
+static const int32_t minTrianglesInNode = 8;
 
-struct BvhNode {
+using MeshTrianglePair = std::tuple<size_t, size_t>;
+using BvhBoundsInfoIter = std::vector<BvhBoundsInfo>::iterator;
+
+} // anonymous namespace
+
+struct BvhAccel::BvhNode {
     size_t                    triangleStartOffset;
     size_t                    numTriangles;
     BBox                      bounds;
@@ -41,24 +47,24 @@ struct BvhNode {
     BvhNode(size_t triangleStartOffset, size_t numTriangles, BBox bounds)
         : triangleStartOffset(triangleStartOffset)
         , numTriangles(numTriangles)
-        , splitAxis(SplitAxis::None)
         , bounds(bounds)
+        , splitAxis(SplitAxis::None)
     { }
 
     BvhNode(SplitAxis splitAxis, BBox bounds, std::unique_ptr<BvhNode>&& leftNode,
         std::unique_ptr<BvhNode>&& rightNode)
-        : splitAxis(splitAxis)
-        , bounds(bounds)
+        : bounds(bounds)
+        , splitAxis(splitAxis)
     {
         childNodes[0] = std::move(leftNode);
         childNodes[1] = std::move(rightNode);
     }
 };
 
-using MeshTrianglePair = std::tuple<size_t, size_t>;
-using BvhBoundsInfoIter = std::vector<BvhBoundsInfo>::iterator;
+// methods internal to the file
+namespace {
 
-std::unique_ptr<BvhNode> buildRecursive(
+std::unique_ptr<BvhAccel::BvhNode> buildRecursive(
     BvhBoundsInfoIter begin,
     BvhBoundsInfoIter end,
     std::vector<MeshTrianglePair>& triangles)
@@ -72,7 +78,7 @@ std::unique_ptr<BvhNode> buildRecursive(
             triangles.push_back(MeshTrianglePair(it->meshId, it->triangleId));
         }
         // Create a leaf node
-        return std::make_unique<BvhNode>(offset, numTriangles, bbox);
+        return std::make_unique<BvhAccel::BvhNode>(offset, numTriangles, bbox);
     }
 
     // Calculate bounding box
@@ -104,7 +110,7 @@ std::unique_ptr<BvhNode> buildRecursive(
     }
 
     // Create a interior node
-    return std::make_unique<BvhNode>(
+    return std::make_unique<BvhAccel::BvhNode>(
         axis,
         bbox,
         buildRecursive(begin, middle, triangles),
@@ -112,7 +118,7 @@ std::unique_ptr<BvhNode> buildRecursive(
 }
 
 template <bool shadow>
-bool traverse(const BvhNode* node, const Ray& ray, const TriAccel* triangles,
+bool traverse(const BvhAccel::BvhNode* node, const Ray& ray, const TriAccel* triangles,
     const std::vector<TriangleMesh>& meshes, RayHitInfo* const isect)
 {
     // Fast ray rejection
