@@ -66,7 +66,6 @@ void taskEntry()
             {
                 runCondition.notify_one();
                 printf("Tasks finished\n");
-                break;
             }
         }
     }
