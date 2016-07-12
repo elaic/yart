@@ -24,6 +24,12 @@ inline float pow<0>(float val)
 	return 1.0f;
 }
 
+template <typename T>
+inline float lerp(T min, T max, float t)
+{
+    return (1.0f - t) * min + t * max;
+}
+
 template <typename TSrc, typename TDst>
 inline TDst convertBits(TSrc src)
 {
