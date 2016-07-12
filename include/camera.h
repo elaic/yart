@@ -17,7 +17,7 @@ public:
         , up_(up)
         , sensor_(Bitmap(width_, height_))
     {
-        right_ = Vector3f(width_ * fov_ / height_, 0.0f, 0.0f);
+        right_ = cross(direction_, up) * (width * fov_ / height_);
         up_ = normal(cross(right_, direction_)) * fov_;
     }
 
