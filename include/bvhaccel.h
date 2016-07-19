@@ -50,11 +50,11 @@ public:
     bool intersectShadow(const Ray& ray) const;
 
 public:
-    struct BvhNode;
+    struct FlattenedBvhNode;
 
 private:
 
-    std::unique_ptr<BvhNode> root_;
+    std::vector<FlattenedBvhNode> optimizedAccel_;
     TriAccel* triangles_;
     const Scene& scene_;
 };

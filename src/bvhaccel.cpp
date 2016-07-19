@@ -29,29 +29,21 @@ struct BvhBoundsInfo {
     }
 };
 
-// Set to 8 which is the width of AVX intructions
-static const int32_t minTrianglesInNode = 8;
-
-using MeshTrianglePair = std::tuple<size_t, size_t>;
-using BvhBoundsInfoIter = std::vector<BvhBoundsInfo>::iterator;
-
-} // anonymous namespace
-
-struct BvhAccel::BvhNode {
+struct BvhNode {
     size_t                    triangleStartOffset;
     size_t                    numTriangles;
     BBox                      bounds;
     SplitAxis                 splitAxis;
     std::unique_ptr<BvhNode>  childNodes[2];
 
-    BvhNode(size_t triangleStartOffset, size_t numTriangles, BBox bounds)
+    BvhNode(size_t triangleStartOffset, size_t numTriangles, const BBox& bounds)
         : triangleStartOffset(triangleStartOffset)
         , numTriangles(numTriangles)
         , bounds(bounds)
         , splitAxis(SplitAxis::None)
     { }
 
-    BvhNode(SplitAxis splitAxis, BBox bounds, std::unique_ptr<BvhNode>&& leftNode,
+    BvhNode(SplitAxis splitAxis, const BBox& bounds, std::unique_ptr<BvhNode>&& leftNode,
         std::unique_ptr<BvhNode>&& rightNode)
         : bounds(bounds)
         , splitAxis(splitAxis)
@@ -61,10 +53,51 @@ struct BvhAccel::BvhNode {
     }
 };
 
+// Set to 8 which is the width of AVX intructions
+static const int32_t minTrianglesInNode = 8;
+
+using MeshTrianglePair = std::tuple<size_t, size_t>;
+using BvhBoundsInfoIter = std::vector<BvhBoundsInfo>::iterator;
+
+} // anonymous namespace
+
+struct BvhAccel::FlattenedBvhNode {
+    static_assert(sizeof(BBox) == 24, "BBox size != 24 bytes");
+
+    // 2 * Vector3 = 6 * float --- 24 bytes
+    BBox bounds;
+    // 4 bytes
+    union {
+        uint32_t childOffset;
+        uint32_t triangleOffset;
+    };
+    // 1 byte
+    uint8_t numTriangles;
+    // 1 byte
+    SplitAxis splitAxis;
+    // 30 bytes total
+    uint8_t padding[2];
+
+    FlattenedBvhNode(uint32_t triangleStartOffset, uint8_t numTriangles, const BBox& bounds)
+        : triangleOffset(triangleStartOffset)
+        , bounds(bounds)
+        , numTriangles(numTriangles)
+        , splitAxis(SplitAxis::None)
+    { }
+
+    FlattenedBvhNode(SplitAxis splitAxis, const BBox& bounds, uint32_t childOffset)
+        : childOffset(childOffset)
+        , bounds(bounds)
+        , splitAxis(splitAxis)
+    { }
+};
+
+static_assert(sizeof(BvhAccel::FlattenedBvhNode), "FlattenedBvhNode size != 32 bytes");
+
 // methods internal to the file
 namespace {
 
-std::unique_ptr<BvhAccel::BvhNode> buildRecursive(
+std::unique_ptr<BvhNode> buildRecursive(
     BvhBoundsInfoIter begin,
     BvhBoundsInfoIter end,
     std::vector<MeshTrianglePair>& triangles)
@@ -78,7 +111,7 @@ std::unique_ptr<BvhAccel::BvhNode> buildRecursive(
             triangles.push_back(MeshTrianglePair(it->meshId, it->triangleId));
         }
         // Create a leaf node
-        return std::make_unique<BvhAccel::BvhNode>(offset, numTriangles, bbox);
+        return std::make_unique<BvhNode>(offset, numTriangles, bbox);
     }
 
     // Calculate bounding box
@@ -110,7 +143,7 @@ std::unique_ptr<BvhAccel::BvhNode> buildRecursive(
     }
 
     // Create a interior node
-    return std::make_unique<BvhAccel::BvhNode>(
+    return std::make_unique<BvhNode>(
         axis,
         bbox,
         buildRecursive(begin, middle, triangles),
@@ -118,7 +151,7 @@ std::unique_ptr<BvhAccel::BvhNode> buildRecursive(
 }
 
 template <bool shadow>
-bool traverse(const BvhAccel::BvhNode* node, const Ray& ray, const TriAccel* triangles,
+bool traverse(const BvhNode* node, const Ray& ray, const TriAccel* triangles,
     const std::vector<TriangleMesh>& meshes, RayHitInfo* const isect)
 {
     // Fast ray rejection
@@ -179,6 +212,98 @@ bool traverse(const BvhAccel::BvhNode* node, const Ray& ray, const TriAccel* tri
     return false;
 }
 
+void flattenBvhTree(
+    std::vector<BvhAccel::FlattenedBvhNode>& flattenedTree,
+    const BvhNode* node)
+{
+    if (node->splitAxis != None) {
+        // interior node
+        flattenedTree.emplace_back(node->splitAxis, node->bounds, 0);
+        auto nodeIdx = flattenedTree.size() - 1;
+
+        flattenBvhTree(flattenedTree, node->childNodes[0].get());
+        auto childOffset = flattenedTree.size();
+        // TODO: insert asserts before casting
+        flattenedTree[nodeIdx].childOffset = (uint32_t)childOffset;
+        flattenBvhTree(flattenedTree, node->childNodes[1].get());
+    } else {
+        // leaf node
+        // TODO: insert asserts before casting
+        flattenedTree.emplace_back((uint32_t)node->triangleStartOffset, (uint8_t)node->numTriangles, node->bounds);
+    }
+}
+
+template <bool shadow>
+bool traverse(const std::vector<BvhAccel::FlattenedBvhNode>& flattenedTree,
+    const Ray& ray, const TriAccel* triangles,
+    const std::vector<TriangleMesh>& meshes, RayHitInfo* const isect)
+{
+    size_t stackOffset = 0;
+    // 64 should be enough... Perhaps some restraints should be put in place in
+    // building routine
+    size_t stack[64];
+    size_t currentNode = 0;
+
+    bool hit = false;
+
+    while (true) {
+        auto& node = flattenedTree[currentNode];
+
+        if (node.bounds.intersect(ray)) {
+            if (node.splitAxis != SplitAxis::None) {
+                // internal node
+                if (ray.dir[node.splitAxis] > 0) {
+                    currentNode = currentNode + 1;
+                    stack[stackOffset] = node.childOffset;
+                } else {
+                    stack[stackOffset] = currentNode + 1;
+                    currentNode = node.childOffset;
+                }
+                stackOffset++;
+            } else {
+                // leaf node
+
+                if (shadow) {
+                    for (size_t i = 0; i < node.numTriangles; ++i) {
+                        size_t tri = node.triangleOffset + i;
+                        if (intersect(triangles[tri], ray, isect)) {
+                            return true;
+                        }
+                    }
+                } else {
+                    int triIdx = -1;
+                    for (size_t i = 0; i < node.numTriangles; ++i) {
+                        size_t tri = node.triangleOffset + i;
+                        if (intersect(triangles[tri], ray, isect)) {
+                            // found closest intersection
+                            triIdx = (int)tri;
+                        }
+                    }
+
+                    if (triIdx != -1) {
+                        hit = true;
+                        auto meshIdx = triangles[triIdx].meshIdx;
+                        auto triangleIdx = triangles[triIdx].triIdx;
+                        isect->normal = meshes[meshIdx].getNormal(triangleIdx);
+                        isect->shadingNormal =
+                            meshes[meshIdx].getShadingNormal(triangleIdx, isect->u, isect->v);
+                        isect->bsdf = meshes[meshIdx].getBsdf();
+                        isect->areaLight = nullptr;
+                    }
+                }
+
+                if (stackOffset == 0) return hit;
+                currentNode = stack[--stackOffset];
+            }
+        } else {
+            if (stackOffset == 0) return hit;
+            currentNode = stack[--stackOffset];
+        }
+    }
+
+    return hit;
+}
+
 } // anonymous namespace
 
 BvhAccel::BvhAccel(const Scene& scene)
@@ -224,7 +349,7 @@ BvhAccel::BvhAccel(const Scene& scene)
     std::vector<MeshTrianglePair> triangles;
     triangles.reserve(numTriangles);
 
-    root_ = buildRecursive(buildData.begin(), buildData.end(), triangles);
+    auto root_ = buildRecursive(buildData.begin(), buildData.end(), triangles);
 
     triangles_ = alignedAlloc<TriAccel>(numTriangles, 16);
     for (size_t i = 0; i < numTriangles; ++i) {
@@ -233,6 +358,8 @@ BvhAccel::BvhAccel(const Scene& scene)
         const auto& t = m.getTriangles()[get<1>(tri)];
         project(&triangles_[i], t, m.getVertices(), (int32_t)get<1>(tri), (int32_t)get<0>(tri));
     }
+
+    flattenBvhTree(optimizedAccel_, root_.get());
 }
 
 BvhAccel::~BvhAccel()
@@ -242,7 +369,7 @@ BvhAccel::~BvhAccel()
 
 bool BvhAccel::intersect(const Ray& ray, RayHitInfo* const isect) const
 {
-    return traverse<false>(root_.get(), ray, triangles_, scene_.getTriangleMeshes(), isect);
+    return traverse<false>(optimizedAccel_, ray, triangles_, scene_.getTriangleMeshes(), isect);
 }
 
 bool BvhAccel::intersectShadow(const Ray& ray) const
@@ -250,6 +377,6 @@ bool BvhAccel::intersectShadow(const Ray& ray) const
     RayHitInfo isect;
     isect.t = ray.maxT;
 
-    return traverse<true>(root_.get(), ray, triangles_, scene_.getTriangleMeshes(), &isect);
+    return traverse<true>(optimizedAccel_, ray, triangles_, scene_.getTriangleMeshes(), &isect);
 }
 
