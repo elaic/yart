@@ -79,15 +79,15 @@ struct BvhAccel::FlattenedBvhNode {
     uint8_t padding[2];
 
     FlattenedBvhNode(uint32_t triangleStartOffset, uint8_t numTriangles, const BBox& bounds)
-        : triangleOffset(triangleStartOffset)
-        , bounds(bounds)
+        : bounds(bounds)
+        , triangleOffset(triangleStartOffset)
         , numTriangles(numTriangles)
         , splitAxis(SplitAxis::None)
     { }
 
     FlattenedBvhNode(SplitAxis splitAxis, const BBox& bounds, uint32_t childOffset)
-        : childOffset(childOffset)
-        , bounds(bounds)
+        : bounds(bounds)
+        , childOffset(childOffset)
         , splitAxis(splitAxis)
     { }
 };
